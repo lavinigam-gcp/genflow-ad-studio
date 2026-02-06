@@ -1,0 +1,7 @@
+flask
+flask-cors
+python-dotenv
+google-genai
+google-cloud-storage
+requests
+pandas

@@ -1,0 +1,595 @@
+<!-- 
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# Author: sjangbahadur@
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VEO Creative Pipeline</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-body: #0f111a;         /* Very dark background */
+            --bg-card: #151923;         /* Panel background */
+            --bg-input: #0b0d12;        /* Input background */
+            --border-color: #2d3342;    /* Subtle borders */
+            --primary: #6366f1;         /* Purple/Blue accent */
+            --primary-hover: #4f46e5;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --status-pending: #334155;
+            --status-active: #6366f1;
+            --status-success: #10b981;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            height: 100vh;
+            overflow: hidden; /* Prevent body scroll, use inner scroll */
+        }
+
+        /* --- Layout --- */
+        .main-container {
+            height: calc(100vh - 70px); /* Minus Navbar height */
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        /* --- Navbar --- */
+        .navbar {
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            height: 70px;
+            padding: 0 30px;
+        }
+        .navbar-brand {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: white !important;
+        }
+        .navbar-brand span {
+            font-weight: 400;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-left: 10px;
+        }
+        .btn-new-project {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            font-size: 0.9rem;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        .btn-new-project:hover { background-color: var(--primary-hover); color: white; }
+
+        /* --- Left Sidebar (Inputs) --- */
+        .sidebar-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+        
+        .form-control {
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: white;
+            font-size: 0.9rem;
+            padding: 12px;
+            border-radius: 8px;
+        }
+        .form-control:focus {
+            background-color: var(--bg-input);
+            border-color: var(--primary);
+            color: white;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+
+        .btn-generate {
+            width: 100%;
+            background-color: var(--primary);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            margin-top: 10px;
+            transition: all 0.2s;
+        }
+        .btn-generate:hover { background-color: var(--primary-hover); }
+        .btn-generate:disabled { background-color: var(--status-pending); cursor: not-allowed; }
+
+        /* --- System Logs --- */
+        .log-container {
+            background-color: #000000;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+        }
+        .log-line { margin-bottom: 4px; display: block; }
+        .log-info { color: #10b981; } /* Green */
+        .log-warn { color: #f59e0b; } /* Yellow */
+        .log-err { color: #ef4444; }  /* Red */
+        .log-dim { color: #64748b; }  /* Gray */
+
+        /* --- Right Pipeline Steps --- */
+        .pipeline-step {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .step-header {
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: default;
+        }
+
+        .step-title {
+            font-weight: 600;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: var(--text-muted);
+        }
+        
+        .step-number {
+            background: var(--status-pending);
+            color: var(--text-muted);
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .step-badge {
+            font-size: 0.75rem;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: var(--status-pending);
+            color: var(--text-muted);
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        /* --- Active/Completed States --- */
+        .pipeline-step.active {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.1);
+        }
+        .pipeline-step.active .step-title { color: white; }
+        .pipeline-step.active .step-number { background: var(--primary); color: white; }
+        .pipeline-step.active .step-badge { background: rgba(99, 102, 241, 0.2); color: var(--primary); }
+
+        .pipeline-step.completed .step-number { background: var(--status-success); color: white; }
+        .pipeline-step.completed .step-badge { background: rgba(16, 185, 129, 0.2); color: var(--status-success); }
+        .pipeline-step.completed .step-title { color: white; }
+
+        /* --- Step Content (Hidden by default) --- */
+        .step-content {
+            border-top: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.2);
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out;
+        }
+        .step-content.expanded {
+            padding: 25px;
+            max-height: 1000px; /* Arbitrary large number for animation */
+            overflow: auto;
+        }
+
+        /* --- Content Styling --- */
+        pre {
+            background: #0b0d12;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            color: #a5b3ce;
+        }
+        .img-preview {
+            max-width: 100%;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        .gcs-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .gcs-link:hover { text-decoration: underline; }
+        .img-fluid-css {
+            max-width: 100%;
+            height: 400px;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-body); }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Spinner */
+        .loading-dots:after {
+            content: '.';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60% { content: '...'; }
+            80%, 100% { content: ''; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar d-flex justify-content-between align-items-center">
+    <div class="navbar-brand">
+        <i class="fa-solid fa-wand-magic-sparkles me-2" style="color:var(--primary)"></i>
+        VEO Creative Pipeline <span>Gemini & VEO Integration</span>
+    </div>
+    <button class="btn btn-new-project" onclick="location.reload()">
+        <i class="fa-solid fa-plus me-2"></i> New Project
+    </button>
+</nav>
+
+<!-- Main Content -->
+<div class="container-fluid main-container">
+    <div class="row h-100">
+        
+        <!-- LEFT COLUMN: INPUTS & LOGS -->
+        <div class="col-lg-4 d-flex flex-column">
+            
+            <!-- Input Card -->
+            <div class="sidebar-card">
+                <h5 class="mb-4 text-white">1. Product Data</h5>
+                
+                <div class="mb-3">
+                    <label class="form-label">Product Name</label>
+                    <input type="text" id="productName" class="form-control" value="Google Pixel Watch 3">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Public Image URL</label>
+                    <input type="text" id="imageUrl" class="form-control" value="https://lh3.googleusercontent.com/4lLgypgc1i3PJR8slbV_H9AEuJaNsX54tzetQKJSIbRajET7wQoCMmkKN4N6n0JrakTnS2xsS0QcVu0bOVpxpsA5TF7818xtJ04=s3000-w3000-e365-rw-v0-nu">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Specifications</label>
+                    <textarea id="specs" class="form-control" rows="7">Key Features
+                    - 4.1 cms (1.61 Inches) AMOLED Display
+                    - Snapdragon W5 Gen 1 Cortex-M33 co-processor
+                    - Google Asistance | GPS Navigation | Call & Text Function
+                    - 40 Plus Exercise Modes | SPO2 Monitor | Heart Rate | Calorie Counter | Sleep Monitor | Exercise Tracker | ECG Monitor
+                    - Upto 24 Hours Battery Life
+                    - 5 ATM Water Resistance | IP68 Water Resistance
+                    - 12 Months Warranty
+                    </textarea>
+                </div>
+
+                <button class="btn btn-generate" id="btnGenerate" onclick="startPipeline()">
+                    Generate Campaign
+                </button>
+            </div>
+
+            <!-- Logs Card -->
+            <div class="flex-grow-1">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="fa-solid fa-terminal me-2 text-muted"></i>
+                    <span class="text-white small">System Logs</span>
+                </div>
+                <div class="log-container" id="systemLogs">
+                    <span class="log-line log-info">> System Ready...</span>
+                    <span class="log-line log-dim">> Waiting for input...</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: PIPELINE STEPS -->
+        <div class="col-lg-8">
+            
+            <!-- Step 2: Script -->
+            <div class="pipeline-step" id="step2">
+                <div class="step-header">
+                    <div class="step-title">
+                        <div class="step-number">2</div>
+                        Script & Strategy
+                    </div>
+                    <div class="step-badge" id="badge-step2">Pending</div>
+                </div>
+                <div class="step-content" id="content-step2">
+                    <pre id="output-script"></pre>
+                </div>
+            </div>
+
+            <!-- Step 3: Avatar -->
+            <div class="pipeline-step" id="step3">
+                <div class="step-header">
+                    <div class="step-title">
+                        <div class="step-number">3</div>
+                        AI Avatar Generation
+                    </div>
+                    <div class="step-badge" id="badge-step3">Pending</div>
+                </div>
+                <div class="step-content" id="content-step3">
+                    <div id="output-avatar"></div>
+                </div>
+            </div>
+
+            <!-- Step 4: Storyboard -->
+            <div class="pipeline-step" id="step4">
+                <div class="step-header">
+                    <div class="step-title">
+                        <div class="step-number">4</div>
+                        Storyboard Scenes & QC
+                    </div>
+                    <div class="step-badge" id="badge-step4">Pending</div>
+                </div>
+                <div class="step-content" id="content-step4">
+                    <div class="row g-3" id="output-storyboard"></div>
+                </div>
+            </div>
+
+            <!-- Step 5: VEO Video -->
+            <div class="pipeline-step" id="step5">
+                <div class="step-header">
+                    <div class="step-title">
+                        <div class="step-number">5</div>
+                        VEO Video Rendering
+                    </div>
+                    <div class="step-badge" id="badge-step5">Pending</div>
+                </div>
+                <div class="step-content" id="content-step5">
+                    <div id="output-video"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- UTILS ---
+    const log = (msg, type='info') => {
+        const box = document.getElementById('systemLogs');
+        const line = document.createElement('span');
+        line.className = `log-line log-${type}`;
+        line.innerText = `> ${msg}`;
+        box.appendChild(line);
+        box.scrollTop = box.scrollHeight;
+    };
+
+    const setStepStatus = (id, status) => {
+        const step = document.getElementById(id);
+        const badge = document.getElementById(`badge-${id}`);
+        
+        step.classList.remove('active', 'completed');
+        
+        if (status === 'processing') {
+            step.classList.add('active');
+            badge.innerText = 'Processing...';
+            badge.style.color = 'var(--primary)';
+        } else if (status === 'completed') {
+            step.classList.add('completed');
+            badge.innerText = 'Completed';
+            badge.style.color = '#10b981';
+        } else {
+            badge.innerText = 'Pending';
+        }
+    };
+
+    const expandContent = (id) => {
+        document.getElementById(`content-${id}`).classList.add('expanded');
+    };
+
+    // --- GLOBAL STATE ---
+    let state = { run_id: null, script: null, avatar: null, storyboard: null };
+
+    // --- LOGIC ---
+    async function startPipeline() {
+        document.getElementById('btnGenerate').disabled = true;
+        log("Initializing pipeline...", "info");
+        
+        const payload = {
+            product_name: document.getElementById('productName').value,
+            specifications: document.getElementById('specs').value,
+            image_url: document.getElementById('imageUrl').value
+        };
+
+        // --- STEP 1 -> 2: SCRIPT ---
+        setStepStatus('step2', 'processing');
+        log("Analyzing product image and specs...", "dim");
+        
+        try {
+            const res = await fetch('/generate-script', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if(data.status === 'error') throw new Error(data.message);
+
+            state.run_id = data.run_id;
+            state.product_gcs = data.product_gcs_uri;
+            state.script = data.script;
+            
+            log("Script generated successfully.", "info");
+            document.getElementById('output-script').textContent = JSON.stringify(state.script, null, 2);
+            expandContent('step2');
+            setStepStatus('step2', 'completed');
+            
+            // Trigger Next
+            runAvatarGen();
+
+        } catch (e) {
+            log(`Error: ${e.message}`, "err");
+            document.getElementById('btnGenerate').disabled = false;
+        }
+    }
+
+    async function runAvatarGen() {
+        setStepStatus('step3', 'processing');
+        log("Generating AI Avatar (Imagen 3)...", "dim");
+
+        try {
+            const res = await fetch('/generate-avatar', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ run_id: state.run_id, avatar_profile: state.script.avatar_profile })
+            });
+            const data = await res.json();
+            if(data.status === 'error') throw new Error(data.message);
+
+            state.avatar = data.avatar_gcs_uri;
+            const avatar_uri = data.avatar_gcs_uri.replace("gs://", "https://storage.mtls.cloud.google.com/");
+            
+            log(`Avatar created: ${state.avatar}`, "info");
+            document.getElementById('output-avatar').innerHTML = 
+                `<div>
+                    <img src="${avatar_uri}" alt="Avatar Image GCS URI: ${avatar_uri}" class="img-fluid-css rounded mt-2">
+                 </div>`;
+            expandContent('step3');
+            setStepStatus('step3', 'completed');
+
+            // Trigger Next
+            runStoryboard();
+
+        } catch (e) {
+            log(`Error in Avatar: ${e.message}`, "err");
+        }
+    }
+
+    async function runStoryboard() {
+        setStepStatus('step4', 'processing');
+        log("Generating Storyboard scenes...", "dim");
+
+        try {
+            const res = await fetch('/generate-storyboard', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    run_id: state.run_id,
+                    scenes: state.script.scenes,
+                    avatar_gcs_uri: state.avatar,
+                    product_gcs_uri: state.product_gcs
+                })
+            });
+            const data = await res.json();
+            if(data.status === 'error') throw new Error(data.message);
+
+            state.storyboard = data.storyboard_results;
+            
+            let html = '';
+            state.storyboard.forEach(item => {
+                log(`Storyboard scene ${item.scene_number} quality results.`,"info");
+                log(`Result: ` + JSON.stringify(item.qc_report), "dim")
+                const scene_uri = item.scene_gcs_uri.replace("gs://", "https://storage.mtls.cloud.google.com/");
+                html += `
+                <div class="col-md-4">
+                    <div class="p-3 border border-secondary rounded bg-dark">
+                        <strong class="text-white">Scene ${item.scene_number}</strong><br>
+                        <img src="${scene_uri}" alt="Scene ${item.scene_number}" class="img-fluid-css rounded mt-2">
+                    </div>
+                </div>`;
+            });
+            document.getElementById('output-storyboard').innerHTML = html;
+            
+            log(`Storyboard generated (${state.storyboard.length} scenes).`, "info");
+            expandContent('step4');
+            setStepStatus('step4', 'completed');
+
+            // Trigger Next
+            runVeoVideo();
+
+        } catch (e) {
+            log(`Error in Storyboard: ${e.message}`, "err");
+        }
+    }
+
+    async function runVeoVideo() {
+        setStepStatus('step5', 'processing');
+        log("Rendering Video with VEO (This may take a moment)...", "warn");
+
+        try {
+            const res = await fetch('/generate-video', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    run_id: state.run_id,
+                    storyboard_results: state.storyboard,
+                    script_scenes: state.script.scenes,
+                    avatar_profile: state.script.avatar_profile
+                })
+            });
+            const data = await res.json();
+            if(data.status === 'error') throw new Error(data.message);
+
+            let html = '';
+            data.video_results.forEach(item => {
+                log(`Video scene ${item.scene_number} quality results.`,"info");
+                log(`Result: ` + JSON.stringify(item.qc_report), "dim")
+                
+                const videoUrl = item.video_uri.replace("gs://", "https://storage.mtls.cloud.google.com/");
+                html += `<video controls class="rounded border border-success" style="height:400px; margin:20px; object-fit: contain; background-color: #000;">
+                            <source src="${videoUrl}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>`;
+            });
+            document.getElementById('output-video').innerHTML = html;
+            
+            log("Pipeline Completed Successfully!", "info");
+            expandContent('step5');
+            setStepStatus('step5', 'completed');
+            document.getElementById('btnGenerate').disabled = false;
+
+        } catch (e) {
+            log(`Error in Video: ${e.message}`, "err");
+        }
+    }
+</script>
+
+</body>
+</html>
