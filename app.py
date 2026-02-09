@@ -25,6 +25,9 @@ from google import genai
 from google.genai import types
 from google.cloud import storage
 from flask_cors import CORS
+import concurrent.futures
+import functools
+import random
 
 # --- Configuration ---
 PROJECT_ID = os.getenv("PROJECT_ID")
@@ -51,6 +54,29 @@ storage_client = storage.Client(project=PROJECT_ID)
 bucket = storage_client.bucket(GCS_BUCKET_NAME)
 
 # --- Helper Functions ---
+
+def retry_with_backoff(retries=3, initial_delay=1, backoff_factor=2):
+    """Decorator to retry a function with exponential backoff."""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            delay = initial_delay
+            last_exception = None
+            for attempt in range(retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    last_exception = e
+                    print(f"Attempt {attempt + 1} failed for {func.__name__}: {e}")
+                    if attempt < retries - 1:
+                        sleep_time = delay + random.uniform(0, 0.1) * delay # Add jitter
+                        print(f"Retrying in {sleep_time:.2f} seconds...")
+                        time.sleep(sleep_time)
+                        delay *= backoff_factor
+            print(f"All {retries} attempts failed for {func.__name__}.")
+            raise last_exception
+        return wrapper
+    return decorator
 
 def clean_json_response(response_text):
     """Cleans Markdown formatting from JSON string."""
@@ -86,6 +112,7 @@ def get_bytes_from_gcs(gcs_uri):
 
 # --- Core AI Functions (Refactored) ---
 
+@retry_with_backoff(retries=3, initial_delay=2, backoff_factor=2)
 def _generate_script_logic(product_name, specs, product_image_bytes):
     msg1_text1 = types.Part.from_text(text=f"""SYSTEM:```You are an award-winning Advertising Director and Creative Copywriter specializing in high-conversion short-form video content.
       Your expertise lies in creating 30-second commercials that utilize realistic AI avatars to build trust and explain complex products simply.
@@ -147,6 +174,7 @@ def _generate_script_logic(product_name, specs, product_image_bytes):
     )
     return clean_json_response(response.text)
 
+@retry_with_backoff(retries=3, initial_delay=2, backoff_factor=2)
 def _generate_image_logic(prompt, output_path, avatar_uri=None, product_uri=None):
     parts = []
     if avatar_uri:
@@ -204,6 +232,7 @@ def _generate_image_logic(prompt, output_path, avatar_uri=None, product_uri=None
             return True
     return False
 
+@retry_with_backoff(retries=3, initial_delay=2, backoff_factor=2)
 def _qc_storyboard_logic(avatar_uri, product_uri, storyboard_uri):
     # Retrieve bytes for QC
     msg1_text1 = types.Part.from_text(text="""SYSTEM:```You are an expert Ad Video Director and Visual Continuity Specialist with a keen eye for detail. Your role is to perform rigorous quality assurance on video storyboards to ensure strict consistency with brand assets. 
@@ -294,6 +323,7 @@ def _qc_storyboard_logic(avatar_uri, product_uri, storyboard_uri):
     )
     return clean_json_response(response.text)
 
+@retry_with_backoff(retries=3, initial_delay=2, backoff_factor=2)
 def _generate_veo_video(prompt, reference_image_uri, output_gcs_uri):
     # Optional parameters
     negative_prompt = "ugly, low quality"
@@ -347,6 +377,7 @@ def _generate_veo_video(prompt, reference_image_uri, output_gcs_uri):
     else:
         return None
 
+@retry_with_backoff(retries=3, initial_delay=2, backoff_factor=2)
 def _qc_video_logic(video_uri, reference_image_uri):
     msg1_text1 = types.Part.from_text(text="""SYSTEM:```You are a veteran Film Director and VFX Quality Control Supervisor with over 20 years of experience in cinematic workflows and post-production. You possess an acute eye for detail, capable of spotting sub-pixel anomalies, temporal inconsistencies, and fidelity issues. 
         Your task is to critique AI-generated or edited video content against reference asset with a rigorous standard for photorealism, continuity, and technical integrity. You communicate using technical cinematic terminology.```
@@ -529,7 +560,7 @@ def generate_storyboard():
         
         results = []
 
-        for scene in scenes:
+        def process_scene(scene):
             scene_num = scene['scene_number']
             prompt = f"Background: {scene['visual_background']}, Action: {scene['avatar_action']}, Product Integration: {scene['product_visual_integration']}"
             
@@ -544,12 +575,28 @@ def generate_storyboard():
                 # QC Check
                 qc_result = _qc_storyboard_logic(avatar_uri, product_uri, scene_gcs_uri)
                 
-                results.append({
+                return {
                     "scene_number": scene_num,
                     "scene_gcs_uri": scene_gcs_uri,
                     "scene_web_uri": scene_web_uri,
                     "qc_report": qc_result
-                })
+                }
+
+        results = []
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future_to_scene = {executor.submit(process_scene, scene): scene for scene in scenes}
+            for future in concurrent.futures.as_completed(future_to_scene):
+                scene = future_to_scene[future]
+                try:
+                    result = future.result()
+                    results.append(result)
+                except Exception as exc:
+                    print(f"Scene {scene['scene_number']} generated an exception: {exc}")
+                    # Optionally handle partial failure or re-raise
+                    raise exc
+
+        # Sort results by scene number to maintain order
+        results.sort(key=lambda x: x['scene_number'])
 
         return jsonify({
             "status": "success",
@@ -578,17 +625,14 @@ def generate_video():
         # Map script details to storyboard images by scene number
         script_map = {s['scene_number']: s for s in script_scenes}
 
-        for scene_img_data in scenes_data:
+        def process_video_scene(scene_img_data):
             scene_num = scene_img_data['scene_number']
             script_detail = script_map.get(scene_num)
             
             if not script_detail:
-                continue
+                return None
 
             # Construct Video Prompt
-            # video_prompt = (f"Cinematic shot. {script_detail['visual_background']}. "
-            #                f"{script_detail['avatar_action']}. "
-            #                f"Product: {script_detail['product_visual_integration']}.")
             video_prompt = f"""scene_type: {script_detail['scene_type']}, tone_of_voice: {avatar_profile['tone_of_voice']}, 
                 avatar_action : {script_detail['avatar_action']}, visual_background: {script_detail['visual_background']},
                  product_visual_integration: {script_detail['product_visual_integration']}, Dialogue:{script_detail['script_dialogue']}"""
@@ -601,11 +645,28 @@ def generate_video():
                 # Video QC
                 qc_verdict = _qc_video_logic(generated_video_uri, scene_img_data['scene_gcs_uri'])
                 
-                video_results.append({
+                return {
                     "scene_number": scene_num,
                     "video_uri": generated_video_uri,
                     "qc_report": qc_verdict
-                })
+                }
+            return None
+
+        video_results = []
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future_to_scene = {executor.submit(process_video_scene, item): item for item in scenes_data}
+            for future in concurrent.futures.as_completed(future_to_scene):
+                item = future_to_scene[future]
+                try:
+                    result = future.result()
+                    if result:
+                        video_results.append(result)
+                except Exception as exc:
+                    print(f"Video generation for scene {item['scene_number']} generated an exception: {exc}")
+                    raise exc
+
+        # Sort results by scene number
+        video_results.sort(key=lambda x: x['scene_number'])
 
         return jsonify({
             "status": "success",
