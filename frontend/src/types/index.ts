@@ -2,6 +2,9 @@ export interface ScriptRequest {
   product_name: string;
   specifications: string;
   image_url: string;
+  scene_count?: number;
+  target_duration?: number;
+  ad_tone?: string;
 }
 
 export interface AvatarProfile {
@@ -26,6 +29,9 @@ export interface Scene {
   script_dialogue: string;
   transition_to_next: string;
   sound_design: string;
+  transition_type?: string;
+  transition_duration?: number;
+  audio_continuity?: string;
 }
 
 export interface VideoScript {
@@ -40,6 +46,18 @@ export interface ScriptResponse {
   run_id: string;
   product_image_path: string;
   script: VideoScript;
+}
+
+export interface ScriptUpdateRequest {
+  run_id: string;
+  script: VideoScript;
+}
+
+export interface ScriptConfig {
+  scene_count: { default: number; min: number; max: number };
+  target_duration: { default: number; min: number; max: number };
+  ad_tones: string[];
+  transition_types: string[];
 }
 
 export interface AvatarVariant {
@@ -96,6 +114,12 @@ export interface VideoResult {
   variants: VideoVariant[];
   selected_index: number;
   selected_video_path: string;
+}
+
+export interface VideoSelectRequest {
+  run_id: string;
+  scene_number: number;
+  variant_index: number;
 }
 
 export enum JobStatus {

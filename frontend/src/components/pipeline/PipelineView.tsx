@@ -24,6 +24,7 @@ export default function PipelineView() {
         <ScriptEditor
           script={pipeline.script}
           onContinue={pipeline.generateAvatars}
+          onUpdateScript={pipeline.updateScript}
           isLoading={pipeline.isLoading}
         />
       ) : null;
@@ -54,6 +55,7 @@ export default function PipelineView() {
         <VideoPlayer
           results={pipeline.videoResults}
           onContinue={pipeline.stitchFinalVideo}
+          onSelectVariant={pipeline.selectVideoVariant}
           isLoading={pipeline.isLoading}
         />
       );

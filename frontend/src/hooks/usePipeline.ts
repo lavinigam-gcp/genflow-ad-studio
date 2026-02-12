@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { usePipelineStore } from '../store/pipelineStore';
 import * as pipelineApi from '../api/pipeline';
-import type { ScriptRequest } from '../types';
+import type { ScriptRequest, VideoScript } from '../types';
 
 export function usePipeline() {
   const store = usePipelineStore();
@@ -132,6 +132,55 @@ export function usePipeline() {
     }
   }, [store]);
 
+  const updateScript = useCallback(async (script: VideoScript) => {
+    const { runId } = usePipelineStore.getState();
+    if (!runId) return;
+    store.setLoading(true);
+    store.setError(null);
+    store.addLog('Saving script changes...', 'info');
+
+    try {
+      const response = await pipelineApi.updateScript(runId, script);
+      store.setScript(response.script);
+      store.addLog('Script updated successfully', 'success');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update script';
+      store.setError(message);
+      store.addLog(message, 'error');
+    } finally {
+      store.setLoading(false);
+    }
+  }, [store]);
+
+  const selectVideoVariant = useCallback(
+    async (sceneNumber: number, variantIndex: number) => {
+      const { runId } = usePipelineStore.getState();
+      if (!runId) return;
+      store.setLoading(true);
+      store.setError(null);
+
+      try {
+        const response = await pipelineApi.selectVideoVariant(
+          runId,
+          sceneNumber,
+          variantIndex,
+        );
+        store.selectVideoVariant(sceneNumber, variantIndex, response.selected_video_path);
+        store.addLog(
+          `Scene ${sceneNumber}: selected variant ${variantIndex + 1}`,
+          'success',
+        );
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to select video variant';
+        store.setError(message);
+        store.addLog(message, 'error');
+      } finally {
+        store.setLoading(false);
+      }
+    },
+    [store],
+  );
+
   const submitForReview = useCallback(async () => {
     if (!store.runId) return;
     store.setStep(6);
@@ -141,9 +190,11 @@ export function usePipeline() {
   return {
     ...store,
     startPipeline,
+    updateScript,
     generateAvatars,
     confirmAvatarSelection,
     generateVideos,
+    selectVideoVariant,
     stitchFinalVideo,
     submitForReview,
   };

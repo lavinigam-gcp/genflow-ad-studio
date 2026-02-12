@@ -38,6 +38,12 @@ class VideoResult(BaseModel):
     selected_video_path: str
 
 
+class VideoSelectRequest(BaseModel):
+    run_id: str
+    scene_number: int
+    variant_index: int
+
+
 class VideoResponse(BaseModel):
     status: str = "success"
     results: list[VideoResult]

@@ -1,10 +1,13 @@
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl
 
 
 class ScriptRequest(BaseModel):
     product_name: str
     specifications: str
     image_url: HttpUrl
+    scene_count: int = Field(default=3, ge=2, le=6)
+    target_duration: int = Field(default=30, ge=15, le=60)
+    ad_tone: str = Field(default="energetic")
 
 
 class AvatarProfile(BaseModel):
@@ -29,6 +32,9 @@ class Scene(BaseModel):
     script_dialogue: str
     transition_to_next: str
     sound_design: str
+    transition_type: str = Field(default="cut")
+    transition_duration: float = Field(default=0.5, ge=0.0, le=2.0)
+    audio_continuity: str = Field(default="")
 
 
 class VideoScript(BaseModel):
@@ -36,6 +42,11 @@ class VideoScript(BaseModel):
     total_duration: int = 30
     avatar_profile: AvatarProfile
     scenes: list[Scene]
+
+
+class ScriptUpdateRequest(BaseModel):
+    run_id: str
+    script: VideoScript
 
 
 class ScriptResponse(BaseModel):

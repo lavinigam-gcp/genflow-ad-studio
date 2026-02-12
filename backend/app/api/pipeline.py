@@ -20,9 +20,9 @@ from app.models.avatar import (
     AvatarSelectRequest,
     AvatarSelectResponse,
 )
-from app.models.script import ScriptRequest, ScriptResponse
+from app.models.script import ScriptRequest, ScriptResponse, ScriptUpdateRequest
 from app.models.storyboard import StoryboardRequest, StoryboardResponse
-from app.models.video import VideoRequest, VideoResponse
+from app.models.video import VideoRequest, VideoResponse, VideoSelectRequest
 from app.services.avatar_service import AvatarService
 from app.services.pipeline_service import PipelineService
 from app.services.script_service import ScriptService
@@ -58,6 +58,22 @@ async def generate_script(
         return await script_svc.generate_script(request)
     except Exception as exc:
         logger.exception("Script generation failed")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/script/update")
+async def update_script(
+    request: ScriptUpdateRequest,
+    script_svc: ScriptService = Depends(get_script_service),
+) -> ScriptResponse:
+    """Update an edited script (persist changes)."""
+    try:
+        return await script_svc.update_script(
+            run_id=request.run_id,
+            script=request.script,
+        )
+    except Exception as exc:
+        logger.exception("Script update failed")
         raise HTTPException(status_code=500, detail=str(exc))
 
 
@@ -144,6 +160,26 @@ async def generate_video(
         raise HTTPException(status_code=404, detail=str(exc))
     except Exception as exc:
         logger.exception("Video generation failed")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/video/select")
+async def select_video_variant(
+    request: VideoSelectRequest,
+    video_svc: VideoService = Depends(get_video_service),
+) -> dict:
+    """User selects a specific video variant for a scene."""
+    try:
+        selected_path = await video_svc.select_variant(
+            run_id=request.run_id,
+            scene_number=request.scene_number,
+            variant_index=request.variant_index,
+        )
+        return {"status": "success", "selected_video_path": selected_path}
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Video variant selection failed")
         raise HTTPException(status_code=500, detail=str(exc))
 
 

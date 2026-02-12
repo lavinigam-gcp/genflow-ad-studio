@@ -8,39 +8,106 @@ Templates use Python str.format() style placeholders.
 # Script generation
 # ---------------------------------------------------------------------------
 
+
+def build_narrative_arc(scene_count: int, target_duration: int = 30) -> str:
+    """Return a numbered narrative arc string sized to *scene_count*.
+
+    Durations are computed as concrete second values so they sum to
+    approximately *target_duration*.
+    """
+    # Each entry: (name, weight, description)
+    if scene_count <= 2:
+        # Hook + CTA
+        arc = [
+            ("The Hook", 0.70, "Grab attention immediately with a bold visual or question"),
+            ("The CTA", 0.30, "Clear, urgent call to action"),
+        ]
+    elif scene_count == 3:
+        # Hook + Reveal + CTA (default - fast ads)
+        arc = [
+            ("The Hook", 0.40, "Grab attention immediately with a bold visual or question"),
+            ("The Reveal", 0.35, "Introduce the product as the solution with a dramatic reveal"),
+            ("The CTA", 0.25, "Clear, urgent call to action"),
+        ]
+    elif scene_count == 4:
+        # Hook + Problem + Reveal + CTA
+        arc = [
+            ("The Hook", 0.30, "Grab attention immediately with a bold visual or question"),
+            ("The Problem", 0.25, "Show the pain point the audience relates to"),
+            ("The Reveal", 0.25, "Introduce the product as the solution with a dramatic reveal"),
+            ("The CTA", 0.20, "Clear, urgent call to action"),
+        ]
+    elif scene_count == 5:
+        # Hook + Problem + Reveal + Proof + CTA
+        arc = [
+            ("The Hook", 0.25, "Grab attention immediately with a bold visual or question"),
+            ("The Problem", 0.20, "Show the pain point the audience relates to"),
+            ("The Reveal", 0.20, "Introduce the product as the solution with a dramatic reveal"),
+            ("The Proof", 0.20, "Demonstrate the key feature or benefit with specifics"),
+            ("The CTA", 0.15, "Clear, urgent call to action"),
+        ]
+    else:
+        # 6 scenes - full arc
+        arc = [
+            ("The Hook", 0.20, "Grab attention immediately with a bold visual or question"),
+            ("The Problem", 0.17, "Show the pain point the audience relates to"),
+            ("The Reveal", 0.20, "Introduce the product as the solution with a dramatic reveal"),
+            ("The Proof", 0.20, "Demonstrate the key feature or benefit with specifics"),
+            ("The Lifestyle", 0.13, "Show the aspirational outcome of using the product"),
+            ("The CTA", 0.10, "Clear, urgent call to action"),
+        ]
+
+    lines: list[str] = []
+    for idx, (name, weight, description) in enumerate(arc, start=1):
+        seconds = round(target_duration * weight)
+        lines.append(f"{idx}. {name} ({seconds}s) - {description}")
+    return "\n".join(lines)
+
+
 SCRIPT_SYSTEM_INSTRUCTION = (
     "You are an award-winning Advertising Director and Creative Copywriter "
     "specializing in high-conversion short-form video content for social media "
-    "(Instagram Reels, YouTube Shorts, TikTok). You create 30-second commercials "
+    "(Instagram Reels, YouTube Shorts, TikTok). You create short commercials "
     "using realistic AI avatars. You think in terms of CAMERA SHOTS, LIGHTING, "
-    "and EMOTIONAL ARCS. You ALWAYS output valid JSON with no additional text."
+    "and EMOTIONAL ARCS. "
+    "Each scene will be generated as an independent video clip. The ending frame "
+    "of scene N must visually connect to the opening frame of scene N+1. "
+    "You specify structured transition types (cut, dissolve, fade, wipe, zoom, "
+    "match_cut, whip_pan) rather than free-text transitions. "
+    "You provide audio_continuity descriptions to bridge audio between scenes. "
+    "You ALWAYS output valid JSON with no additional text."
 )
 
 SCRIPT_USER_PROMPT_TEMPLATE = """\
-Analyze the product image provided and create a cinematic 30-second video \
-advertisement script for the following product.
+Analyze the product image provided and create a cinematic {target_duration}-second \
+video advertisement script for the following product.
 
 PRODUCT: {product_name}
 SPECIFICATIONS: {specs}
 
-NARRATIVE ARC (6 scenes, ~30 seconds total):
-1. The Hook (6s) - Grab attention immediately with a bold visual or question
-2. The Problem (5s) - Show the pain point the audience relates to
-3. The Reveal (6s) - Introduce the product as the solution with a dramatic reveal
-4. The Proof (6s) - Demonstrate the key feature or benefit with specifics
-5. The Lifestyle (4s) - Show the aspirational outcome of using the product
-6. The CTA (3s) - Clear, urgent call to action
+CREATIVE DIRECTION: {ad_tone}
+
+NARRATIVE ARC ({scene_count} scenes, ~{target_duration} seconds total):
+{narrative_arc}
 
 DIALOGUE RULES:
-- Max 20-25 words per 8-second scene
+- Max {max_words} words per scene
 - Conversational, punchy, direct-to-camera tone
 - Use power words: "finally", "imagine", "discover", "unlock"
 - End with a single clear CTA
 
+SCENE CONTINUITY RULES:
+- The ending frame of scene N must visually match the opening frame of scene N+1.
+- Maintain consistent color grading and lighting temperature across all scenes.
+- When camera position changes between scenes, use match cuts or motivated \
+transitions to preserve spatial logic.
+- Ensure the avatar's wardrobe, hairstyle, and accessories remain identical \
+throughout all scenes.
+
 Return ONLY this JSON structure:
 {{
   "video_title": "Catchy title for the ad",
-  "total_duration": 30,
+  "total_duration": {target_duration},
   "avatar_profile": {{
     "gender": "male or female",
     "age_range": "e.g. 25-35",
@@ -62,13 +129,17 @@ Return ONLY this JSON structure:
       "product_visual_integration": "Product held at chest height, angled toward camera",
       "script_dialogue": "The dialogue the avatar speaks in this scene",
       "transition_to_next": "Quick zoom into product surface",
+      "transition_type": "dissolve",
+      "transition_duration": 0.5,
+      "audio_continuity": "Music pulse carries over into next scene; ambient tone stays warm",
       "sound_design": "Subtle electronic pulse building anticipation"
     }}
   ]
 }}
 
-Create exactly 6 scenes following the narrative arc above. Make the script \
-specific to the product shown in the image and described in the specifications.\
+Create exactly {scene_count} scenes following the narrative arc above. Make the \
+script specific to the product shown in the image and described in the \
+specifications.\
 """
 
 # ---------------------------------------------------------------------------
@@ -95,29 +166,23 @@ Photorealistic only.\
 # ---------------------------------------------------------------------------
 
 STORYBOARD_PROMPT_TEMPLATE = """\
-Scene {scene_number} of {total_scenes} in a premium product commercial.
+A photorealistic advertising photograph for scene {scene_number} of a \
+{total_scenes}-scene premium product commercial. This is a {shot_type} \
+captured at the peak moment of a {camera_movement}. The setting is \
+{visual_background} with {lighting}.
 
-SHOT COMPOSITION:
-- Shot type: {shot_type}
-- Camera movement: {camera_movement} (captured as a still at peak moment)
-- Background: {visual_background}
-- Lighting: {lighting}
+The presenter — who MUST be the EXACT same person shown in the first \
+reference image, preserving their face shape, skin tone, eye color, hair \
+color and style, and body proportions exactly — {avatar_action}. \
+Their expression conveys {avatar_emotion}.
 
-SUBJECT:
-The person in this scene MUST be the EXACT same person as in the first \
-reference image. Preserve their face shape, skin tone, eye color, hair \
-color and style, and body proportions exactly. \
-The presenter {avatar_action}. \
-Their expression conveys: {avatar_emotion}.
-
-PRODUCT:
-The product MUST look identical to the second reference image. \
-Preserve exact colors, logos, text, and proportions of the product. \
+The product shown in the second reference image MUST appear identical — \
+preserve exact colors, logos, text, and proportions of the product. \
 {product_visual_integration}.
 
-STYLE:
-Photorealistic, cinematic color grading, professional advertising photography, \
-clean composition, 9:16 vertical format, broadcast quality.\
+Shot on professional cinema camera, 85mm portrait lens, 9:16 vertical \
+format, cinematic color grading, shallow depth of field with subject \
+and product in sharp focus, broadcast-quality advertising photography.\
 """
 
 # ---------------------------------------------------------------------------
@@ -125,27 +190,23 @@ clean composition, 9:16 vertical format, broadcast quality.\
 # ---------------------------------------------------------------------------
 
 VIDEO_PROMPT_TEMPLATE = """\
-A photorealistic commercial video scene. \
-{shot_type} of a {gender} presenter ({age_range}, {visual_description}) \
-in {visual_background}. \
-The presenter {avatar_action}. \
-Their tone is {tone_of_voice}, and their expression shows {avatar_emotion}. \
-{product_visual_integration}. \
-The presenter speaks: "{script_dialogue}". \
-Camera: {camera_movement}. \
-Lighting: {lighting}. \
-Transition intent: {transition_to_next}. \
-Sound design: {sound_design}. \
-Style: High-end product commercial, broadcast quality, 4K cinematic look, \
-natural motion, professional color grading.\
+The subject {avatar_action}, their expression conveying {avatar_emotion}. \
+{camera_movement}. {product_visual_integration}.
+
+The subject speaks in a {tone_of_voice} voice, saying: {script_dialogue}
+
+{sound_design}. \
+Smooth, natural motion with broadcast-quality cinematography.\
 """
 
 VIDEO_NEGATIVE_PROMPT = (
     "ugly, low quality, blurry, pixelated, noisy, distorted face, "
     "deformed hands, extra fingers, mutated, disfigured, bad anatomy, "
-    "watermark, text overlay, logo, cartoon, anime, illustration, "
-    "3D render, uncanny valley, jerky motion, flickering, artifacts, "
-    "overexposed, underexposed, dutch angle, shaky camera"
+    "watermark, text overlay, text rendering, on-screen text, subtitles, "
+    "logo, cartoon, anime, illustration, 3D render, uncanny valley, "
+    "jerky motion, flickering, artifacts, overexposed, underexposed, "
+    "dutch angle, shaky camera, lip sync mismatch, audio desync, "
+    "multiple people, crowd, extra person"
 )
 
 # ---------------------------------------------------------------------------

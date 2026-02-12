@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api import assets, bulk, jobs, pipeline, review
+from app.api import assets, bulk, config_api, jobs, pipeline, review
 from app.api.health import router as health_router
 from app.dependencies import get_broadcaster, get_job_store, get_task_runner
 
@@ -60,6 +60,7 @@ app.include_router(jobs.router)
 app.include_router(bulk.router)
 app.include_router(review.router)
 app.include_router(assets.router)
+app.include_router(config_api.router)
 
 if __name__ == "__main__":
     import uvicorn

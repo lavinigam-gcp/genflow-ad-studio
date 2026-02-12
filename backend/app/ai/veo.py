@@ -46,7 +46,7 @@ class VeoService:
             aspect_ratio="9:16",
             number_of_videos=num_variants,
             duration_seconds=8,
-            enhance_prompt=True,
+            generate_audio=True,
             negative_prompt=VIDEO_NEGATIVE_PROMPT,
             person_generation="allow_all",
             output_gcs_uri=output_gcs_uri,

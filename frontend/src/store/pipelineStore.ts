@@ -27,6 +27,7 @@ interface PipelineState {
   selectAvatar: (index: number) => void;
   setStoryboard: (results: StoryboardResult[]) => void;
   setVideos: (results: VideoResult[]) => void;
+  selectVideoVariant: (sceneNumber: number, variantIndex: number, selectedPath: string) => void;
   setFinalVideo: (path: string) => void;
   addLog: (message: string, level: LogEntry['level']) => void;
   setLoading: (loading: boolean) => void;
@@ -64,6 +65,15 @@ export const usePipelineStore = create<PipelineState>((set) => ({
   setStoryboard: (results) => set({ storyboardResults: results }),
 
   setVideos: (results) => set({ videoResults: results }),
+
+  selectVideoVariant: (sceneNumber, variantIndex, selectedPath) =>
+    set((state) => ({
+      videoResults: state.videoResults.map((r) =>
+        r.scene_number === sceneNumber
+          ? { ...r, selected_index: variantIndex, selected_video_path: selectedPath }
+          : r,
+      ),
+    })),
 
   setFinalVideo: (path) => set({ finalVideoPath: path }),
 

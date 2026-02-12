@@ -12,6 +12,7 @@ from app.models.script import (
     Scene,
     ScriptRequest,
     ScriptResponse,
+    ScriptUpdateRequest,
     VideoScript,
 )
 from app.storage.local import LocalStorage
@@ -65,6 +66,9 @@ class ScriptService:
             product_name=request.product_name,
             specs=request.specifications,
             image_bytes=image_bytes,
+            scene_count=request.scene_count,
+            target_duration=request.target_duration,
+            ad_tone=request.ad_tone,
         )
 
         # Parse into VideoScript model
@@ -90,5 +94,30 @@ class ScriptService:
         return ScriptResponse(
             run_id=run_id,
             product_image_path=self.storage.to_url_path(product_image_path),
+            script=script,
+        )
+
+    async def update_script(self, run_id: str, script: VideoScript) -> ScriptResponse:
+        """Persist an edited script back to disk."""
+        script_json = script.model_dump()
+        self.storage.save_bytes(
+            run_id=run_id,
+            filename="script.json",
+            data=json.dumps(script_json, indent=2).encode("utf-8"),
+        )
+        logger.info("Script updated for run_id=%s", run_id)
+
+        # Build path to product image — it was saved during generate_script
+        run_dir = Path(self.settings.output_dir) / run_id
+        product_image_path = ""
+        for ext in ("png", "jpg", "webp"):
+            candidate = run_dir / f"product_image.{ext}"
+            if candidate.exists():
+                product_image_path = self.storage.to_url_path(str(candidate))
+                break
+
+        return ScriptResponse(
+            run_id=run_id,
+            product_image_path=product_image_path,
             script=script,
         )

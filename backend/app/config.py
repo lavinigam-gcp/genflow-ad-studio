@@ -45,6 +45,13 @@ class Settings(BaseSettings):
     max_avatar_variants: int = 4
     max_concurrent_scenes: int = 3
 
+    # Script generation settings
+    script_default_scene_count: int = 3
+    script_max_scene_count: int = 6
+    script_min_scene_count: int = 2
+    script_default_total_duration: int = 30
+    script_max_dialogue_words_per_scene: int = 25
+
     model_config = {
         "env_file": _find_env_file(),
         "env_file_encoding": "utf-8",

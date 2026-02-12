@@ -1,42 +1,135 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Card,
   CardContent,
   Typography,
   Button,
   Box,
-  Paper,
   ToggleButtonGroup,
   ToggleButton,
   TextField,
   Chip,
 } from '@mui/material';
-import { Visibility, Edit, ArrowForward } from '@mui/icons-material';
-import type { VideoScript } from '../../types';
+import {
+  Visibility,
+  Edit,
+  Code,
+  ArrowForward,
+  Save,
+} from '@mui/icons-material';
+import type { VideoScript, Scene } from '../../types';
+import SceneCard from './SceneCard';
+import TransitionIndicator from './TransitionIndicator';
 
 interface ScriptEditorProps {
   script: VideoScript;
   onContinue: () => void;
+  onUpdateScript?: (script: VideoScript) => Promise<void>;
   isLoading: boolean;
 }
 
-export default function ScriptEditor({ script, onContinue, isLoading }: ScriptEditorProps) {
-  const [mode, setMode] = useState<'view' | 'edit'>('view');
+export default function ScriptEditor({
+  script,
+  onContinue,
+  onUpdateScript,
+  isLoading,
+}: ScriptEditorProps) {
+  const [mode, setMode] = useState<'view' | 'edit' | 'json'>('view');
   const [editJson, setEditJson] = useState(() => JSON.stringify(script, null, 2));
+  const [editedScenes, setEditedScenes] = useState<Scene[]>(() => [...script.scenes]);
+  const [hasChanges, setHasChanges] = useState(false);
 
-  const handleModeChange = (_: React.MouseEvent<HTMLElement>, newMode: 'view' | 'edit' | null) => {
+  const handleModeChange = (
+    _: React.MouseEvent<HTMLElement>,
+    newMode: 'view' | 'edit' | 'json' | null,
+  ) => {
     if (newMode) {
       setMode(newMode);
-      if (newMode === 'edit') {
-        setEditJson(JSON.stringify(script, null, 2));
+      if (newMode === 'json') {
+        // Sync JSON view with current state (edited scenes or original)
+        const currentScript = hasChanges
+          ? { ...script, scenes: editedScenes }
+          : script;
+        setEditJson(JSON.stringify(currentScript, null, 2));
+      }
+      if (newMode === 'view' || newMode === 'edit') {
+        // Sync scenes from JSON if JSON was edited
+        if (mode === 'json') {
+          try {
+            const parsed = JSON.parse(editJson) as VideoScript;
+            setEditedScenes(parsed.scenes);
+          } catch {
+            // Invalid JSON, keep current edited scenes
+          }
+        }
       }
     }
   };
 
+  const handleSceneChange = useCallback(
+    (index: number, updated: Scene) => {
+      setEditedScenes((prev) => {
+        const next = [...prev];
+        next[index] = updated;
+        return next;
+      });
+      setHasChanges(true);
+    },
+    [],
+  );
+
+  const handleTransitionChange = useCallback(
+    (
+      sceneIndex: number,
+      updates: {
+        transition_type: string;
+        transition_duration: number;
+        audio_continuity: string;
+      },
+    ) => {
+      setEditedScenes((prev) => {
+        const next = [...prev];
+        next[sceneIndex] = { ...next[sceneIndex], ...updates };
+        return next;
+      });
+      setHasChanges(true);
+    },
+    [],
+  );
+
+  const handleSave = async () => {
+    if (!onUpdateScript) return;
+
+    let scriptToSave: VideoScript;
+
+    if (mode === 'json') {
+      try {
+        scriptToSave = JSON.parse(editJson) as VideoScript;
+      } catch {
+        return; // Invalid JSON
+      }
+    } else {
+      scriptToSave = { ...script, scenes: editedScenes };
+    }
+
+    await onUpdateScript(scriptToSave);
+    setHasChanges(false);
+  };
+
+  const isEditing = mode === 'edit';
+  const displayScenes = isEditing ? editedScenes : script.scenes;
+
   return (
     <Card sx={{ maxWidth: 900, mx: 'auto' }}>
       <CardContent sx={{ p: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            mb: 3,
+          }}
+        >
           <Typography variant="h5" sx={{ fontWeight: 600 }}>
             Generated Script
           </Typography>
@@ -54,6 +147,10 @@ export default function ScriptEditor({ script, onContinue, isLoading }: ScriptEd
               <Edit sx={{ mr: 0.5, fontSize: 18 }} />
               Edit
             </ToggleButton>
+            <ToggleButton value="json">
+              <Code sx={{ mr: 0.5, fontSize: 18 }} />
+              JSON
+            </ToggleButton>
           </ToggleButtonGroup>
         </Box>
 
@@ -63,34 +160,16 @@ export default function ScriptEditor({ script, onContinue, isLoading }: ScriptEd
           <Chip label={`${script.scenes.length} scenes`} variant="outlined" />
         </Box>
 
-        {mode === 'view' ? (
-          <Paper
-            sx={{
-              p: 3,
-              backgroundColor: '#F8F9FA',
-              maxHeight: 500,
-              overflow: 'auto',
-            }}
-          >
-            <pre
-              style={{
-                fontFamily: '"Roboto Mono", monospace',
-                fontSize: 13,
-                lineHeight: 1.6,
-                margin: 0,
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-              }}
-            >
-              {JSON.stringify(script, null, 2)}
-            </pre>
-          </Paper>
-        ) : (
+        {mode === 'json' ? (
+          /* JSON mode — raw JSON editor for power users */
           <TextField
             fullWidth
             multiline
             value={editJson}
-            onChange={(e) => setEditJson(e.target.value)}
+            onChange={(e) => {
+              setEditJson(e.target.value);
+              setHasChanges(true);
+            }}
             slotProps={{
               input: {
                 sx: {
@@ -100,8 +179,56 @@ export default function ScriptEditor({ script, onContinue, isLoading }: ScriptEd
                 },
               },
             }}
-            sx={{ '& .MuiOutlinedInput-root': { maxHeight: 500, overflow: 'auto' } }}
+            sx={{
+              '& .MuiOutlinedInput-root': { maxHeight: 500, overflow: 'auto' },
+            }}
           />
+        ) : (
+          /* View and Edit modes — visual scene cards */
+          <Box
+            sx={{
+              maxHeight: 600,
+              overflow: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'stretch',
+            }}
+          >
+            {displayScenes.map((scene, index) => (
+              <Box key={scene.scene_number}>
+                <SceneCard
+                  scene={scene}
+                  isEditing={isEditing}
+                  onChange={(updated) => handleSceneChange(index, updated)}
+                />
+                {/* Show transition indicator between scenes (not after last) */}
+                {index < displayScenes.length - 1 && (
+                  <TransitionIndicator
+                    transitionType={scene.transition_type ?? 'cut'}
+                    transitionDuration={scene.transition_duration ?? 0.5}
+                    audioContinuity={scene.audio_continuity ?? ''}
+                    isEditing={isEditing}
+                    onChange={(updates) => handleTransitionChange(index, updates)}
+                  />
+                )}
+              </Box>
+            ))}
+          </Box>
+        )}
+
+        {/* Save button (visible when there are unsaved changes) */}
+        {hasChanges && onUpdateScript && (
+          <Button
+            variant="outlined"
+            color="primary"
+            fullWidth
+            onClick={handleSave}
+            disabled={isLoading}
+            startIcon={<Save />}
+            sx={{ mt: 2, py: 1 }}
+          >
+            Save Changes
+          </Button>
         )}
 
         <Button
@@ -111,7 +238,7 @@ export default function ScriptEditor({ script, onContinue, isLoading }: ScriptEd
           onClick={onContinue}
           disabled={isLoading}
           endIcon={<ArrowForward />}
-          sx={{ mt: 3, py: 1.5 }}
+          sx={{ mt: 2, py: 1.5 }}
         >
           Continue to Avatar Generation
         </Button>

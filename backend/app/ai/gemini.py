@@ -11,6 +11,7 @@ from app.ai.prompts import (
     STORYBOARD_QC_USER_PROMPT,
     VIDEO_QC_SYSTEM_INSTRUCTION,
     VIDEO_QC_USER_PROMPT,
+    build_narrative_arc,
 )
 from app.ai.retry import async_retry
 from app.config import Settings
@@ -45,11 +46,23 @@ class GeminiService:
 
     @async_retry(retries=3)
     async def generate_script(
-        self, product_name: str, specs: str, image_bytes: bytes
+        self,
+        product_name: str,
+        specs: str,
+        image_bytes: bytes,
+        scene_count: int = 3,
+        target_duration: int = 30,
+        ad_tone: str = "energetic",
     ) -> dict:
         """Generate video script using Gemini 3 Pro with structured JSON output."""
         user_prompt = SCRIPT_USER_PROMPT_TEMPLATE.format(
-            product_name=product_name, specs=specs
+            product_name=product_name,
+            specs=specs,
+            scene_count=scene_count,
+            target_duration=target_duration,
+            narrative_arc=build_narrative_arc(scene_count, target_duration),
+            ad_tone=ad_tone,
+            max_words=self.settings.script_max_dialogue_words_per_scene,
         )
 
         image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/png")

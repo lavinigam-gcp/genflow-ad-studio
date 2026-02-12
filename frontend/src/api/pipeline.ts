@@ -8,10 +8,26 @@ import type {
   StoryboardResult,
   VideoResult,
   Job,
+  VideoScript,
+  ScriptConfig,
 } from '../types';
 
 export async function generateScript(request: ScriptRequest): Promise<ScriptResponse> {
   return api.post<ScriptResponse>('/pipeline/script', request);
+}
+
+export async function updateScript(
+  runId: string,
+  script: VideoScript,
+): Promise<ScriptResponse> {
+  return api.post<ScriptResponse>('/pipeline/script/update', {
+    run_id: runId,
+    script,
+  });
+}
+
+export async function getScriptConfig(): Promise<ScriptConfig> {
+  return api.post<ScriptConfig>('/config/script');
 }
 
 export async function generateAvatars(
@@ -58,6 +74,17 @@ export async function generateVideo(
       script_scenes: scriptScenes,
       avatar_profile: avatarProfile,
     },
+  );
+}
+
+export async function selectVideoVariant(
+  runId: string,
+  sceneNumber: number,
+  variantIndex: number,
+): Promise<{ status: string; selected_video_path: string }> {
+  return api.post<{ status: string; selected_video_path: string }>(
+    '/pipeline/video/select',
+    { run_id: runId, scene_number: sceneNumber, variant_index: variantIndex },
   );
 }
 

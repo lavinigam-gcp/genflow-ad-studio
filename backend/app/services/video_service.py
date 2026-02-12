@@ -37,11 +37,13 @@ class VideoService:
         script_scenes: list[Scene],
         avatar_profile: AvatarProfile,
         on_progress: Callable | None = None,
+        num_variants: int | None = None,
     ) -> VideoResponse:
         """Generate video variants for all scenes with QC and auto-selection.
 
         Uses bounded concurrency via asyncio.Semaphore.
         """
+        effective_variants = num_variants or self.settings.max_video_variants
         semaphore = asyncio.Semaphore(self.settings.max_concurrent_scenes)
 
         # Build a lookup from scene_number -> Scene
@@ -52,6 +54,7 @@ class VideoService:
                 scene = scene_lookup[sb_result.scene_number]
                 return await self._process_single_scene(
                     run_id, sb_result, scene, avatar_profile, on_progress,
+                    num_variants=effective_variants,
                 )
 
         tasks = [process_scene(sb) for sb in scenes_data]
@@ -67,8 +70,10 @@ class VideoService:
         scene: Scene,
         avatar_profile: AvatarProfile,
         on_progress: Callable | None,
+        num_variants: int | None = None,
     ) -> VideoResult:
         """Process a single scene: upload to GCS, generate videos, QC, select best."""
+        effective_variants = num_variants or self.settings.max_video_variants
         scene_num = sb_result.scene_number
 
         # 1. Upload storyboard image to GCS as Veo reference
@@ -88,21 +93,14 @@ class VideoService:
             self.gcs.upload_file, product_local, gcs_product_path,
         )
 
-        # 2. Build video prompt
+        # 2. Build video prompt (motion-only for Veo 3.1 image-to-video)
         prompt = VIDEO_PROMPT_TEMPLATE.format(
-            shot_type=scene.shot_type,
-            gender=avatar_profile.gender,
-            age_range=avatar_profile.age_range,
-            visual_description=avatar_profile.visual_description,
-            visual_background=scene.visual_background,
             avatar_action=scene.avatar_action,
-            tone_of_voice=avatar_profile.tone_of_voice,
             avatar_emotion=scene.avatar_emotion,
-            product_visual_integration=scene.product_visual_integration,
-            script_dialogue=scene.script_dialogue,
             camera_movement=scene.camera_movement,
-            lighting=scene.lighting,
-            transition_to_next=scene.transition_to_next,
+            product_visual_integration=scene.product_visual_integration,
+            tone_of_voice=avatar_profile.tone_of_voice,
+            script_dialogue=scene.script_dialogue,
             sound_design=scene.sound_design,
         )
 
@@ -112,7 +110,7 @@ class VideoService:
             prompt=prompt,
             reference_image_uri=storyboard_gcs_uri,
             output_gcs_uri=output_gcs_uri,
-            num_variants=self.settings.max_video_variants,
+            num_variants=effective_variants,
         )
 
         # 4. Download all variants from GCS to local
@@ -177,6 +175,37 @@ class VideoService:
             selected_index=selected_idx,
             selected_video_path=self.storage.to_url_path(selected_path),
         )
+
+    async def select_variant(
+        self, run_id: str, scene_number: int, variant_index: int
+    ) -> str:
+        """Select a different video variant for a scene.
+
+        Copies the chosen variant to selected_video.mp4 and returns its URL path.
+        """
+        source_local = str(self.storage.get_path(
+            run_id,
+            f"variant_{variant_index}.mp4",
+            subdir=f"scenes/scene_{scene_number}/video_variants",
+        ))
+        if not self.storage.get_path(
+            run_id, f"variant_{variant_index}.mp4",
+            subdir=f"scenes/scene_{scene_number}/video_variants",
+        ).exists():
+            raise FileNotFoundError(
+                f"Variant {variant_index} not found for scene {scene_number}"
+            )
+
+        selected_path = self.storage.save_file(
+            run_id=run_id,
+            filename="selected_video.mp4",
+            source_path=source_local,
+            subdir=f"scenes/scene_{scene_number}",
+        )
+        logger.info(
+            "Scene %d: user selected variant %d", scene_number, variant_index
+        )
+        return self.storage.to_url_path(selected_path)
 
     def _find_product_image(self, run_id: str) -> str:
         """Find the product image file in the run directory."""
