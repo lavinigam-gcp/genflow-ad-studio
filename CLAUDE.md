@@ -37,7 +37,7 @@ backend/
     ai/    {gemini, gemini_image, veo, retry, prompts}.py
     models/ {job, script, avatar, storyboard, video, review, sse, common}.py
     services/ {pipeline, script, avatar, storyboard, video, stitch, qc, review, bulk}_service.py
-    api/    {pipeline, jobs, bulk, review, assets, health}.py
+    api/    {pipeline, jobs, bulk, review, assets, health, config_api}.py
     jobs/   {store, runner, events}.py
     utils/  {ffmpeg, csv_parser, json_parser}.py
 frontend/src/
@@ -53,3 +53,4 @@ frontend/src/
 - Don't use raw `fetch()` — use `api/client.ts` (configured base URL + error handling)
 - Don't call `useStore()` in async callbacks — use `useStore.getState()` instead
 - Don't skip `to_url_path()` when returning file paths from backend services
+- Don't add `Co-Authored-By` tags to commit messages
