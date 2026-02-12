@@ -27,6 +27,14 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Veo 3.1 | FFmpeg
 - QC feedback loop: generate → QC score → rewrite prompt → regenerate (max 3 attempts)
 - SSE events: add to `SSEEventType` enum + backend `broadcaster.emit()` + frontend `useSSE` handler
 
+## Layout
+
+- **AppBar**: Centered logo only (`frontend/src/components/layout/AppBar.tsx`)
+- **Floating nav sidebar**: Fixed vertical icon buttons on the left edge with tooltips (`MainLayout.tsx`)
+- **Stepper**: Horizontal pipeline progress below the header (`MainLayout.tsx`)
+- **Main content**: Centered max-width 1400px area
+- Nav items defined in `MainLayout.tsx` `NAV_ITEMS` array — add icons from `@mui/icons-material`
+
 ## Structure
 
 ```
@@ -40,11 +48,13 @@ backend/
     api/    {pipeline, jobs, bulk, review, assets, health, config_api}.py
     jobs/   {store, runner, events}.py
     utils/  {ffmpeg, csv_parser, json_parser}.py
-frontend/src/
-  api/     {client, pipeline}.ts
-  types/   index.ts            # Must mirror backend models
-  stores/  {pipeline, review}Store.ts
-  components/ {pipeline/, review/, common/, layout/}
+frontend/
+  public/                     # Static assets (logo, favicons, web manifest)
+  src/
+    api/     {client, pipeline}.ts
+    types/   index.ts            # Must mirror backend models
+    stores/  {pipeline, review}Store.ts
+    components/ {pipeline/, review/, common/, layout/}
 ```
 
 ## Don'ts
