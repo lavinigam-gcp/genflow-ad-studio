@@ -1,0 +1,65 @@
+[
+  {
+    "id": "running_shoes",
+    "product_name": "AeroGlide Pro Running Shoes",
+    "specifications": "Weight: 215g (men's size 10)\nDrop: 8mm (heel-to-toe)\nMidsole: ZoomX foam with carbon fiber plate\nUpper: Engineered mesh with Flyknit collar\nOutsole: Rubber waffle pattern for road + light trail\nColors: Volt/Black, Arctic Blue/White, Sunset Orange\nKey Features: Energy return, responsive cushioning, breathable fit\nPrice: $179.99",
+    "image_url": "http://localhost:8000/output/samples/running_shoes.png",
+    "thumbnail": "/output/samples/running_shoes.png"
+  },
+  {
+    "id": "espresso_machine",
+    "product_name": "BrewMaster S1 Espresso Machine",
+    "specifications": "Pressure: 15-bar Italian pump\nBoiler: Thermoblock heating, ready in 25 seconds\nWater Tank: 1.5L removable\nGrinder: Built-in conical burr, 15 settings\nMilk System: Automatic steam wand with latte art capability\nDisplay: 2.8\" color touchscreen\nDimensions: 11\" x 14\" x 15\"\nFinish: Brushed stainless steel with matte black accents\nKey Features: PID temperature control, pre-infusion, auto-clean\nPrice: $549.99",
+    "image_url": "http://localhost:8000/output/samples/espresso_machine.png",
+    "thumbnail": "/output/samples/espresso_machine.png"
+  },
+  {
+    "id": "headphones",
+    "product_name": "SoundWave ANC Pro Headphones",
+    "specifications": "Driver: 40mm custom dynamic drivers\nFrequency Response: 4Hz - 40kHz\nANC: Adaptive hybrid active noise cancellation\nBattery: 60 hours (ANC on), 80 hours (ANC off)\nCharging: USB-C, 5-min charge = 4 hours playback\nConnectivity: Bluetooth 5.4, multipoint (3 devices)\nCodec Support: LDAC, aptX Adaptive, AAC\nWeight: 254g\nKey Features: Spatial audio, transparency mode, AI call noise reduction\nPrice: $349.99",
+    "image_url": "http://localhost:8000/output/samples/headphones.png",
+    "thumbnail": "/output/samples/headphones.png"
+  },
+  {
+    "id": "smartwatch",
+    "product_name": "PulseTrack Ultra Smartwatch",
+    "specifications": "Display: 1.45\" AMOLED, 466x466, 2000 nits peak brightness\nCase: Grade 5 titanium, 46mm diameter\nSensors: Optical heart rate, SpO2, skin temperature, ECG\nNavigation: Dual-band GPS + GLONASS + Galileo\nBattery: 7-day typical use, 48hr GPS continuous\nWater Resistance: 10ATM (100m)\nConnectivity: Bluetooth 5.3, Wi-Fi, NFC payments\nOS: Wear OS 5 with custom fitness suite\nKey Features: Sleep coaching, body composition, offline maps\nPrice: $399.99",
+    "image_url": "http://localhost:8000/output/samples/smartwatch.png",
+    "thumbnail": "/output/samples/smartwatch.png"
+  },
+  {
+    "id": "skincare_serum",
+    "product_name": "GlowLab Vitamin C Serum",
+    "specifications": "Active Ingredients: 20% L-Ascorbic Acid, 1% Hyaluronic Acid, 0.5% Vitamin E\nVolume: 30ml / 1.0 fl oz\nPackaging: Amber glass dropper bottle with matte gold cap\npH: 3.2 (optimal for L-AA absorption)\nTexture: Lightweight, fast-absorbing water-based serum\nSkin Types: All skin types, dermatologist tested\nKey Features: Brightening, anti-aging, antioxidant protection, dark spot correction\nCertifications: Cruelty-free, vegan, fragrance-free\nPrice: $68.00",
+    "image_url": "http://localhost:8000/output/samples/skincare_serum.png",
+    "thumbnail": "/output/samples/skincare_serum.png"
+  },
+  {
+    "id": "electric_scooter",
+    "product_name": "UrbanGlide X1 Electric Scooter",
+    "specifications": "Motor: 350W brushless hub motor (700W peak)\nTop Speed: 25 mph (40 km/h)\nRange: 30 miles (48 km) per charge\nBattery: 48V 15Ah lithium-ion, 4hr full charge\nTires: 10\" pneumatic, puncture-resistant\nBrakes: Dual disc brakes + regenerative braking\nWeight: 36 lbs (16.3 kg), foldable design\nMax Load: 265 lbs (120 kg)\nKey Features: LED headlight/taillight, app connectivity, cruise control\nPrice: $799.99",
+    "image_url": "http://localhost:8000/output/samples/electric_scooter.png",
+    "thumbnail": "/output/samples/electric_scooter.png"
+  },
+  {
+    "id": "wireless_earbuds",
+    "product_name": "BassCore Elite Earbuds",
+    "specifications": "Drivers: 10mm custom dynamic drivers with titanium diaphragm\nANC: Hybrid active noise cancellation, -35dB reduction\nBattery: 8hr earbuds + 32hr charging case (40hr total)\nCharging: USB-C, Qi wireless charging\nWater Resistance: IPX5 (sweat and rain proof)\nConnectivity: Bluetooth 5.4, multipoint (2 devices)\nCodec Support: LDAC, AAC, SBC\nWeight: 5.2g per earbud, 48g case\nKey Features: Spatial audio, transparency mode, in-ear detection\nPrice: $129.99",
+    "image_url": "http://localhost:8000/output/samples/wireless_earbuds.png",
+    "thumbnail": "/output/samples/wireless_earbuds.png"
+  },
+  {
+    "id": "yoga_mat",
+    "product_name": "ZenGrip Pro Yoga Mat",
+    "specifications": "Thickness: 6mm (1/4 inch)\nMaterial: Natural tree rubber base, polyurethane top layer\nDimensions: 72\" x 26\" (183 x 66 cm)\nWeight: 5.5 lbs (2.5 kg)\nSurface: Non-slip wet and dry grip, moisture-absorbing\nAlignment: Laser-etched alignment markers\nCertifications: OEKO-TEX Standard 100, biodegradable\nIncludes: Cotton carry strap\nKey Features: Eco-friendly, antimicrobial, superior cushioning\nPrice: $89.99",
+    "image_url": "http://localhost:8000/output/samples/yoga_mat.png",
+    "thumbnail": "/output/samples/yoga_mat.png"
+  },
+  {
+    "id": "portable_blender",
+    "product_name": "BlendJet PowerFresh Blender",
+    "specifications": "Motor: 300W high-torque motor\nCapacity: 20oz (590ml) BPA-free Tritan jar\nBlades: 6-point stainless steel, ice-crushing capable\nBattery: 4000mAh USB-C rechargeable, 15+ blends per charge\nSpeed: One-touch operation, 30-second blend cycle\nDimensions: 3.5\" x 10.5\" (9 x 27 cm)\nWeight: 1.3 lbs (590g)\nSafety: Auto-lock when open, magnetic charging base\nKey Features: Self-cleaning mode, leak-proof lid, dishwasher-safe jar\nPrice: $49.99",
+    "image_url": "http://localhost:8000/output/samples/portable_blender.png",
+    "thumbnail": "/output/samples/portable_blender.png"
+  }
+]

@@ -2,9 +2,11 @@
 .env
 .env.local
 
-# Claude Code / docs
+# AI agent tooling (local-only config and state)
 .claude/
+.playwright-mcp/
 .docs/
+.gemini/
 
 # Python
 __pycache__/
@@ -16,9 +18,10 @@ backend/.venv/
 frontend/node_modules/
 frontend/dist/
 
-# Generated assets (local storage)
-backend/output/
-output/
+# Generated assets (local storage) — ignore everything except sample images
+/output/
+backend/output/*
+!backend/output/samples/
 
 # IDE
 .vscode/

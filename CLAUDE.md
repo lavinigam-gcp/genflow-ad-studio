@@ -68,4 +68,4 @@ frontend/
 - Don't call `useStore()` in async callbacks — use `useStore.getState()` instead
 - Don't skip `to_url_path()` when returning file paths from backend services
 - Don't add `Co-Authored-By` tags to commit messages
-- Don't commit `.playwright-mcp/` — it's local Playwright MCP tooling state
+- Don't stage or commit dot-folders (`.claude/`, `.gemini/`, `.playwright-mcp/`, etc.) — they are local agent state
