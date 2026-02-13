@@ -13,6 +13,7 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Veo 3.1 | FFmpeg
 | `make test-api` | Smoke-test API (needs running backend) |
 | `make setup` | Full first-time setup |
 | `make clean` | Remove venvs, node_modules, output |
+| `make generate-samples` | Generate missing sample product images via AI |
 
 **Always run `make check` before finishing any task.**
 
@@ -26,6 +27,9 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Veo 3.1 | FFmpeg
 - Veo outputs VFR video — always preprocess to 24fps CFR before stitching
 - QC feedback loop: generate → QC score → rewrite prompt → regenerate (max 3 attempts)
 - SSE events: add to `SSEEventType` enum + backend `broadcaster.emit()` + frontend `useSSE` handler
+- `image_url` accepts local `/output/...` paths — services detect prefix and read from disk
+- Video duration = `scene_count × 8` (Veo 8s clips) — not user-configurable
+- File uploads: use `api.upload()` with FormData — `api.post()` is for JSON only
 
 ## Layout
 
@@ -44,8 +48,8 @@ backend/
     dependencies.py           # DI container (@lru_cache singletons)
     ai/    {gemini, gemini_image, veo, retry, prompts}.py
     models/ {job, script, avatar, storyboard, video, review, sse, common}.py
-    services/ {pipeline, script, avatar, storyboard, video, stitch, qc, review, bulk}_service.py
-    api/    {pipeline, jobs, bulk, review, assets, health, config_api}.py
+    services/ {pipeline, script, avatar, storyboard, video, stitch, qc, review, bulk, input}_service.py
+    api/    {pipeline, jobs, bulk, review, assets, health, config_api, input}.py
     jobs/   {store, runner, events}.py
     utils/  {ffmpeg, csv_parser, json_parser}.py
 frontend/
@@ -53,7 +57,7 @@ frontend/
   src/
     api/     {client, pipeline}.ts
     types/   index.ts            # Must mirror backend models
-    stores/  {pipeline, review}Store.ts
+    store/   {pipeline, review, bulk}Store.ts
     components/ {pipeline/, review/, common/, layout/}
 ```
 
@@ -64,3 +68,4 @@ frontend/
 - Don't call `useStore()` in async callbacks — use `useStore.getState()` instead
 - Don't skip `to_url_path()` when returning file paths from backend services
 - Don't add `Co-Authored-By` tags to commit messages
+- Don't commit `.playwright-mcp/` — it's local Playwright MCP tooling state
