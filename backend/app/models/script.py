@@ -1,13 +1,13 @@
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 
 
 class ScriptRequest(BaseModel):
     product_name: str
     specifications: str
-    image_url: HttpUrl
+    image_url: str
     scene_count: int = Field(default=3, ge=2, le=6)
-    target_duration: int = Field(default=30, ge=15, le=60)
     ad_tone: str = Field(default="energetic")
+    gemini_model: str | None = None
 
 
 class AvatarProfile(BaseModel):
@@ -54,3 +54,40 @@ class ScriptResponse(BaseModel):
     run_id: str
     product_image_path: str
     script: VideoScript
+
+
+# ---------------------------------------------------------------------------
+# Input step models
+# ---------------------------------------------------------------------------
+
+
+class SampleProduct(BaseModel):
+    id: str
+    product_name: str
+    specifications: str
+    image_url: str
+    thumbnail: str
+
+
+class ImageUploadResponse(BaseModel):
+    status: str = "success"
+    image_url: str
+
+
+class GenerateImageRequest(BaseModel):
+    description: str
+
+
+class GenerateImageResponse(BaseModel):
+    status: str = "success"
+    image_url: str
+
+
+class AnalyzeImageRequest(BaseModel):
+    image_url: str
+
+
+class AnalyzeImageResponse(BaseModel):
+    status: str = "success"
+    product_name: str
+    specifications: str

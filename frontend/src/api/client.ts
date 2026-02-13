@@ -1,12 +1,12 @@
 const BASE_URL = '/api/v1';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const isFormData = options?.body instanceof FormData;
   const response = await fetch(`${BASE_URL}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
     ...options,
+    headers: isFormData
+      ? { ...options?.headers }
+      : { 'Content-Type': 'application/json', ...options?.headers },
   });
   if (!response.ok) {
     const errorText = await response.text();
@@ -32,4 +32,7 @@ export const api = {
 
   delete: <T>(path: string): Promise<T> =>
     request<T>(path, { method: 'DELETE' }),
+
+  upload: <T>(path: string, formData: FormData): Promise<T> =>
+    request<T>(path, { method: 'POST', body: formData }),
 };

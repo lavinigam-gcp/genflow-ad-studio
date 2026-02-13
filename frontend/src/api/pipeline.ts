@@ -10,6 +10,10 @@ import type {
   Job,
   VideoScript,
   ScriptConfig,
+  ImageUploadResponse,
+  GenerateImageResponse,
+  AnalyzeImageResponse,
+  SampleProduct,
 } from '../types';
 
 export async function generateScript(request: ScriptRequest): Promise<ScriptResponse> {
@@ -113,4 +117,30 @@ export async function submitReview(
     status: action,
     notes,
   });
+}
+
+// ---------------------------------------------------------------------------
+// Input step API
+// ---------------------------------------------------------------------------
+
+export async function uploadImage(file: File): Promise<ImageUploadResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.upload<ImageUploadResponse>('/input/upload-image', formData);
+}
+
+export async function generateProductImage(
+  description: string,
+): Promise<GenerateImageResponse> {
+  return api.post<GenerateImageResponse>('/input/generate-image', { description });
+}
+
+export async function analyzeImage(
+  imageUrl: string,
+): Promise<AnalyzeImageResponse> {
+  return api.post<AnalyzeImageResponse>('/input/analyze-image', { image_url: imageUrl });
+}
+
+export async function listSamples(): Promise<{ samples: SampleProduct[] }> {
+  return api.post<{ samples: SampleProduct[] }>('/input/samples');
 }

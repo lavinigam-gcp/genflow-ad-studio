@@ -19,11 +19,6 @@ async def get_script_config() -> dict:
             "min": 2,
             "max": 6,
         },
-        "target_duration": {
-            "default": 30,
-            "min": 15,
-            "max": 60,
-        },
         "ad_tones": AD_TONES,
         "transition_types": TRANSITION_TYPES,
     }

@@ -3,8 +3,8 @@ export interface ScriptRequest {
   specifications: string;
   image_url: string;
   scene_count?: number;
-  target_duration?: number;
   ad_tone?: string;
+  gemini_model?: string;
 }
 
 export interface AvatarProfile {
@@ -55,7 +55,6 @@ export interface ScriptUpdateRequest {
 
 export interface ScriptConfig {
   scene_count: { default: number; min: number; max: number };
-  target_duration: { default: number; min: number; max: number };
   ad_tones: string[];
   transition_types: string[];
 }
@@ -180,4 +179,46 @@ export interface SSEEvent {
   job_id: string;
   data: Record<string, unknown>;
   timestamp: string;
+}
+
+// ---------------------------------------------------------------------------
+// Input step models
+// ---------------------------------------------------------------------------
+
+export interface SampleProduct {
+  id: string;
+  product_name: string;
+  specifications: string;
+  image_url: string;
+  thumbnail: string;
+}
+
+export interface ImageUploadResponse {
+  status: string;
+  image_url: string;
+}
+
+export interface GenerateImageRequest {
+  description: string;
+}
+
+export interface GenerateImageResponse {
+  status: string;
+  image_url: string;
+}
+
+export interface AnalyzeImageRequest {
+  image_url: string;
+}
+
+export interface AnalyzeImageResponse {
+  status: string;
+  product_name: string;
+  specifications: string;
+}
+
+export interface GeminiModelOption {
+  id: string;
+  label: string;
+  description: string;
 }

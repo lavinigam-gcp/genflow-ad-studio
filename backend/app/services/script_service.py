@@ -30,7 +30,7 @@ class ScriptService:
         """Generate a video script from product details and image.
 
         1. Generate unique run_id
-        2. Download product image from request.image_url
+        2. Load product image (local path or HTTP download)
         3. Save product image locally
         4. Call Gemini to generate script
         5. Parse into VideoScript model
@@ -39,20 +39,28 @@ class ScriptService:
         """
         run_id = uuid.uuid4().hex[:12]
 
-        # Download the product image
-        headers = {"User-Agent": "GenflowAdStudio/2.0"}
-        async with httpx.AsyncClient(follow_redirects=True, timeout=30.0, headers=headers) as client:
-            resp = await client.get(str(request.image_url))
-            resp.raise_for_status()
-            image_bytes = resp.content
+        image_url = str(request.image_url)
 
-        # Determine file extension from content type
-        content_type = resp.headers.get("content-type", "image/png")
-        ext = "png"
-        if "jpeg" in content_type or "jpg" in content_type:
-            ext = "jpg"
-        elif "webp" in content_type:
-            ext = "webp"
+        # Load image bytes — local /output/ path or HTTP download
+        if image_url.startswith("/output/"):
+            local_path = Path(self.settings.output_dir).resolve() / image_url.removeprefix("/output/")
+            image_bytes = local_path.read_bytes()
+            ext = local_path.suffix.lstrip(".")
+            if ext not in ("png", "jpg", "jpeg", "webp"):
+                ext = "png"
+        else:
+            headers = {"User-Agent": "GenflowAdStudio/2.0"}
+            async with httpx.AsyncClient(follow_redirects=True, timeout=30.0, headers=headers) as client:
+                resp = await client.get(image_url)
+                resp.raise_for_status()
+                image_bytes = resp.content
+
+            content_type = resp.headers.get("content-type", "image/png")
+            ext = "png"
+            if "jpeg" in content_type or "jpg" in content_type:
+                ext = "jpg"
+            elif "webp" in content_type:
+                ext = "webp"
 
         # Save product image
         product_image_path = self.storage.save_bytes(
@@ -61,14 +69,18 @@ class ScriptService:
             data=image_bytes,
         )
 
+        # Compute target duration from scene count (Veo generates 8s clips)
+        target_duration = request.scene_count * 8
+
         # Generate script via Gemini
         raw_script = await self.gemini.generate_script(
             product_name=request.product_name,
             specs=request.specifications,
             image_bytes=image_bytes,
             scene_count=request.scene_count,
-            target_duration=request.target_duration,
+            target_duration=target_duration,
             ad_tone=request.ad_tone,
+            model_id=request.gemini_model,
         )
 
         # Parse into VideoScript model
@@ -76,7 +88,7 @@ class ScriptService:
         scenes = [Scene(**s) for s in raw_script["scenes"]]
         script = VideoScript(
             video_title=raw_script["video_title"],
-            total_duration=raw_script.get("total_duration", 30),
+            total_duration=raw_script.get("total_duration", target_duration),
             avatar_profile=avatar_profile,
             scenes=scenes,
         )

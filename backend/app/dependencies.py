@@ -13,6 +13,7 @@ from app.jobs.runner import TaskRunner
 from app.jobs.store import JobStore
 from app.services.avatar_service import AvatarService
 from app.services.bulk_service import BulkService
+from app.services.input_service import InputService
 from app.services.pipeline_service import PipelineService
 from app.services.qc_service import QCService
 from app.services.review_service import ReviewService
@@ -116,6 +117,16 @@ def get_veo_service() -> VeoService:
 # ---------------------------------------------------------------------------
 # Application services
 # ---------------------------------------------------------------------------
+
+@lru_cache
+def get_input_service() -> InputService:
+    return InputService(
+        gemini=get_gemini_service(),
+        gemini_image=get_gemini_image_service(),
+        storage=get_local_storage(),
+        settings=get_settings(),
+    )
+
 
 @lru_cache
 def get_qc_service() -> QCService:

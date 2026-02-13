@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -9,14 +9,20 @@ import {
   Typography,
   CircularProgress,
   Box,
-  Divider,
   Chip,
-  Slider,
   Collapse,
   ToggleButtonGroup,
   ToggleButton,
   IconButton,
+  Tab,
+  Tabs,
+  Alert,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
+import type { SelectChangeEvent } from '@mui/material';
 import {
   AutoAwesome,
   Inventory2,
@@ -24,174 +30,31 @@ import {
   ExpandLess,
   ChevronLeft,
   ChevronRight,
+  CloudUpload,
+  Link as LinkIcon,
+  Image as ImageIcon,
+  AutoFixHigh,
 } from '@mui/icons-material';
-import type { ScriptRequest } from '../../types';
+import type { ScriptRequest, SampleProduct, GeminiModelOption } from '../../types';
+import {
+  listSamples,
+  uploadImage,
+  generateProductImage,
+  analyzeImage,
+} from '../../api/pipeline';
 
 interface ProductFormProps {
   onSubmit: (request: ScriptRequest) => Promise<void>;
   isLoading: boolean;
 }
 
-// ---------------------------------------------------------------------------
-// Sample products with pre-generated images (via Nano Banana Pro)
-// ---------------------------------------------------------------------------
-interface SampleProduct extends ScriptRequest {
-  id: string;
-  thumbnail: string;
-}
-
-const SAMPLE_PRODUCTS: SampleProduct[] = [
-  {
-    id: 'running_shoes',
-    product_name: 'AeroGlide Pro Running Shoes',
-    specifications: `Weight: 215g (men's size 10)
-Drop: 8mm (heel-to-toe)
-Midsole: ZoomX foam with carbon fiber plate
-Upper: Engineered mesh with Flyknit collar
-Outsole: Rubber waffle pattern for road + light trail
-Colors: Volt/Black, Arctic Blue/White, Sunset Orange
-Key Features: Energy return, responsive cushioning, breathable fit
-Price: $179.99`,
-    image_url: 'http://localhost:8000/output/samples/running_shoes.png',
-    thumbnail: '/output/samples/running_shoes.png',
-  },
-  {
-    id: 'espresso_machine',
-    product_name: 'BrewMaster S1 Espresso Machine',
-    specifications: `Pressure: 15-bar Italian pump
-Boiler: Thermoblock heating, ready in 25 seconds
-Water Tank: 1.5L removable
-Grinder: Built-in conical burr, 15 settings
-Milk System: Automatic steam wand with latte art capability
-Display: 2.8" color touchscreen
-Dimensions: 11" x 14" x 15"
-Finish: Brushed stainless steel with matte black accents
-Key Features: PID temperature control, pre-infusion, auto-clean
-Price: $549.99`,
-    image_url: 'http://localhost:8000/output/samples/espresso_machine.png',
-    thumbnail: '/output/samples/espresso_machine.png',
-  },
-  {
-    id: 'headphones',
-    product_name: 'SoundWave ANC Pro Headphones',
-    specifications: `Driver: 40mm custom dynamic drivers
-Frequency Response: 4Hz - 40kHz
-ANC: Adaptive hybrid active noise cancellation
-Battery: 60 hours (ANC on), 80 hours (ANC off)
-Charging: USB-C, 5-min charge = 4 hours playback
-Connectivity: Bluetooth 5.4, multipoint (3 devices)
-Codec Support: LDAC, aptX Adaptive, AAC
-Weight: 254g
-Key Features: Spatial audio, transparency mode, AI call noise reduction
-Price: $349.99`,
-    image_url: 'http://localhost:8000/output/samples/headphones.png',
-    thumbnail: '/output/samples/headphones.png',
-  },
-  {
-    id: 'smartwatch',
-    product_name: 'PulseTrack Ultra Smartwatch',
-    specifications: `Display: 1.45" AMOLED, 466x466, 2000 nits peak brightness
-Case: Grade 5 titanium, 46mm diameter
-Sensors: Optical heart rate, SpO2, skin temperature, ECG
-Navigation: Dual-band GPS + GLONASS + Galileo
-Battery: 7-day typical use, 48hr GPS continuous
-Water Resistance: 10ATM (100m)
-Connectivity: Bluetooth 5.3, Wi-Fi, NFC payments
-OS: Wear OS 5 with custom fitness suite
-Key Features: Sleep coaching, body composition, offline maps
-Price: $399.99`,
-    image_url: 'http://localhost:8000/output/samples/smartwatch.png',
-    thumbnail: '/output/samples/smartwatch.png',
-  },
-  {
-    id: 'skincare_serum',
-    product_name: 'GlowLab Vitamin C Serum',
-    specifications: `Active Ingredients: 20% L-Ascorbic Acid, 1% Hyaluronic Acid, 0.5% Vitamin E
-Volume: 30ml / 1.0 fl oz
-Packaging: Amber glass dropper bottle with matte gold cap
-pH: 3.2 (optimal for L-AA absorption)
-Texture: Lightweight, fast-absorbing water-based serum
-Skin Types: All skin types, dermatologist tested
-Key Features: Brightening, anti-aging, antioxidant protection, dark spot correction
-Certifications: Cruelty-free, vegan, fragrance-free
-Price: $68.00`,
-    image_url: 'http://localhost:8000/output/samples/skincare_serum.png',
-    thumbnail: '/output/samples/skincare_serum.png',
-  },
-  {
-    id: 'electric_scooter',
-    product_name: 'UrbanGlide X1 Electric Scooter',
-    specifications: `Motor: 350W brushless hub motor (700W peak)
-Top Speed: 25 mph (40 km/h)
-Range: 30 miles (48 km) per charge
-Battery: 48V 15Ah lithium-ion, 4hr full charge
-Tires: 10" pneumatic, puncture-resistant
-Brakes: Dual disc brakes + regenerative braking
-Weight: 36 lbs (16.3 kg), foldable design
-Max Load: 265 lbs (120 kg)
-Key Features: LED headlight/taillight, app connectivity, cruise control
-Price: $799.99`,
-    image_url: 'http://localhost:8000/output/samples/electric_scooter.png',
-    thumbnail: '/output/samples/electric_scooter.png',
-  },
-  {
-    id: 'wireless_earbuds',
-    product_name: 'BassCore Elite Earbuds',
-    specifications: `Drivers: 10mm custom dynamic drivers with titanium diaphragm
-ANC: Hybrid active noise cancellation, -35dB reduction
-Battery: 8hr earbuds + 32hr charging case (40hr total)
-Charging: USB-C, Qi wireless charging
-Water Resistance: IPX5 (sweat and rain proof)
-Connectivity: Bluetooth 5.4, multipoint (2 devices)
-Codec Support: LDAC, AAC, SBC
-Weight: 5.2g per earbud, 48g case
-Key Features: Spatial audio, transparency mode, in-ear detection
-Price: $129.99`,
-    image_url: 'http://localhost:8000/output/samples/wireless_earbuds.png',
-    thumbnail: '/output/samples/wireless_earbuds.png',
-  },
-  {
-    id: 'yoga_mat',
-    product_name: 'ZenGrip Pro Yoga Mat',
-    specifications: `Thickness: 6mm (1/4 inch)
-Material: Natural tree rubber base, polyurethane top layer
-Dimensions: 72" x 26" (183 x 66 cm)
-Weight: 5.5 lbs (2.5 kg)
-Surface: Non-slip wet and dry grip, moisture-absorbing
-Alignment: Laser-etched alignment markers
-Certifications: OEKO-TEX Standard 100, biodegradable
-Includes: Cotton carry strap
-Key Features: Eco-friendly, antimicrobial, superior cushioning
-Price: $89.99`,
-    image_url: 'http://localhost:8000/output/samples/yoga_mat.png',
-    thumbnail: '/output/samples/yoga_mat.png',
-  },
-  {
-    id: 'portable_blender',
-    product_name: 'BlendJet PowerFresh Blender',
-    specifications: `Motor: 300W high-torque motor
-Capacity: 20oz (590ml) BPA-free Tritan jar
-Blades: 6-point stainless steel, ice-crushing capable
-Battery: 4000mAh USB-C rechargeable, 15+ blends per charge
-Speed: One-touch operation, 30-second blend cycle
-Dimensions: 3.5" x 10.5" (9 x 27 cm)
-Weight: 1.3 lbs (590g)
-Safety: Auto-lock when open, magnetic charging base
-Key Features: Self-cleaning mode, leak-proof lid, dishwasher-safe jar
-Price: $49.99`,
-    image_url: 'http://localhost:8000/output/samples/portable_blender.png',
-    thumbnail: '/output/samples/portable_blender.png',
-  },
-];
-
 const AD_TONES = ['energetic', 'sophisticated', 'playful', 'authoritative', 'warm'];
 
-const SCENE_COUNT_MARKS = [
-  { value: 2, label: '2' },
-  { value: 3, label: '3' },
-  { value: 4, label: '4' },
-  { value: 5, label: '5' },
-  { value: 6, label: '6' },
+const GEMINI_MODELS: GeminiModelOption[] = [
+  { id: 'gemini-3-pro-preview', label: 'Gemini 3 Pro', description: 'Best quality (default)' },
+  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash', description: 'Faster' },
+  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', description: 'Stable' },
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Fastest' },
 ];
 
 export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
@@ -200,15 +63,38 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
     specifications: '',
     image_url: '',
     scene_count: 3,
-    target_duration: 30,
     ad_tone: 'energetic',
+    gemini_model: 'gemini-3-pro-preview',
   });
   const [selectedSample, setSelectedSample] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [scrollOffset, setScrollOffset] = useState(0);
 
+  // Sample products loaded from API
+  const [samples, setSamples] = useState<SampleProduct[]>([]);
+  const [samplesLoading, setSamplesLoading] = useState(true);
+
+  // Image input tabs
+  const [imageTab, setImageTab] = useState(0);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageInputLoading, setImageInputLoading] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [generatePrompt, setGeneratePrompt] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-fill
+  const [autoFillLoading, setAutoFillLoading] = useState(false);
+
   const visibleCount = 3;
-  const maxOffset = Math.max(0, SAMPLE_PRODUCTS.length - visibleCount);
+  const maxOffset = Math.max(0, samples.length - visibleCount);
+
+  // Load samples on mount
+  useEffect(() => {
+    listSamples()
+      .then((res) => setSamples(res.samples))
+      .catch(() => setSamples([]))
+      .finally(() => setSamplesLoading(false));
+  }, []);
 
   const handleChange =
     (field: keyof ScriptRequest) =>
@@ -225,11 +111,93 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
       image_url: sample.image_url,
     }));
     setSelectedSample(sample.id);
+    setImagePreview(sample.thumbnail);
+    setImageError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     await onSubmit(formData);
+  };
+
+  // Image upload handler
+  const handleFileUpload = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setImageError('Please select an image file');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setImageError('File exceeds 10MB limit');
+      return;
+    }
+
+    setImageInputLoading(true);
+    setImageError(null);
+    // Show local preview immediately
+    setImagePreview(URL.createObjectURL(file));
+
+    try {
+      const res = await uploadImage(file);
+      setFormData((prev) => ({ ...prev, image_url: res.image_url }));
+      setImagePreview(res.image_url);
+      setSelectedSample(null);
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : 'Upload failed');
+      setImagePreview(null);
+    } finally {
+      setImageInputLoading(false);
+    }
+  }, []);
+
+  // Drag-and-drop handlers
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      const file = e.dataTransfer.files[0];
+      if (file) handleFileUpload(file);
+    },
+    [handleFileUpload],
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+  }, []);
+
+  // AI image generation
+  const handleGenerateImage = async () => {
+    if (!generatePrompt.trim()) return;
+    setImageInputLoading(true);
+    setImageError(null);
+    setImagePreview(null);
+
+    try {
+      const res = await generateProductImage(generatePrompt);
+      setFormData((prev) => ({ ...prev, image_url: res.image_url }));
+      setImagePreview(res.image_url);
+      setSelectedSample(null);
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : 'Generation failed');
+    } finally {
+      setImageInputLoading(false);
+    }
+  };
+
+  // Auto-fill from image
+  const handleAutoFill = async () => {
+    if (!formData.image_url) return;
+    setAutoFillLoading(true);
+    try {
+      const res = await analyzeImage(formData.image_url);
+      setFormData((prev) => ({
+        ...prev,
+        product_name: res.product_name,
+        specifications: res.specifications,
+      }));
+    } catch {
+      // Silently fail — user can still fill in manually
+    } finally {
+      setAutoFillLoading(false);
+    }
   };
 
   return (
@@ -256,35 +224,38 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
               sx={{ fontSize: '0.7rem', height: 20 }}
             />
             <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
-              {SAMPLE_PRODUCTS.length} products
+              {samplesLoading ? '...' : `${samples.length} products`}
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <IconButton
-              size="small"
-              onClick={() => setScrollOffset((o) => Math.max(0, o - 1))}
-              disabled={scrollOffset === 0 || isLoading}
-            >
-              <ChevronLeft />
-            </IconButton>
-            <Box
-              sx={{
-                display: 'flex',
-                gap: 2,
-                flex: 1,
-                overflow: 'hidden',
-              }}
-            >
-              {SAMPLE_PRODUCTS.slice(scrollOffset, scrollOffset + visibleCount).map(
-                (sample) => (
+          {samplesLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <IconButton
+                size="small"
+                onClick={() => setScrollOffset((o) => Math.max(0, o - 1))}
+                disabled={scrollOffset === 0 || isLoading}
+              >
+                <ChevronLeft />
+              </IconButton>
+              <Box
+                sx={{
+                  display: 'flex',
+                  gap: 2,
+                  flex: 1,
+                  overflow: 'hidden',
+                }}
+              >
+                {samples.slice(scrollOffset, scrollOffset + visibleCount).map((sample) => (
                   <Card
                     key={sample.id}
                     variant="outlined"
                     sx={{
                       flex: 1,
                       minWidth: 0,
-                      border:
-                        selectedSample === sample.id ? '2px solid' : '1px solid',
+                      border: selectedSample === sample.id ? '2px solid' : '1px solid',
                       borderColor:
                         selectedSample === sample.id ? 'primary.main' : 'divider',
                       transition: 'all 0.15s',
@@ -322,40 +293,220 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
                       </CardContent>
                     </CardActionArea>
                   </Card>
-                ),
-              )}
+                ))}
+              </Box>
+              <IconButton
+                size="small"
+                onClick={() => setScrollOffset((o) => Math.min(maxOffset, o + 1))}
+                disabled={scrollOffset >= maxOffset || isLoading}
+              >
+                <ChevronRight />
+              </IconButton>
             </Box>
-            <IconButton
-              size="small"
-              onClick={() => setScrollOffset((o) => Math.min(maxOffset, o + 1))}
-              disabled={scrollOffset >= maxOffset || isLoading}
-            >
-              <ChevronRight />
-            </IconButton>
-          </Box>
+          )}
         </Box>
 
-        {/* Scene count slider */}
-        <Box sx={{ mb: 3, px: 1 }}>
+        {/* Scene count — ToggleButtonGroup */}
+        <Box sx={{ mb: 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
             Scene Count
           </Typography>
-          <Slider
+          <ToggleButtonGroup
             value={formData.scene_count ?? 3}
-            onChange={(_, value) =>
-              setFormData((prev) => ({ ...prev, scene_count: value as number }))
-            }
-            min={2}
-            max={6}
-            step={1}
-            marks={SCENE_COUNT_MARKS}
-            valueLabelDisplay="auto"
+            exclusive
+            onChange={(_, value) => {
+              if (value !== null) setFormData((prev) => ({ ...prev, scene_count: value }));
+            }}
+            size="medium"
             disabled={isLoading}
-            sx={{ maxWidth: 400 }}
-          />
+          >
+            {[2, 3, 4, 5, 6].map((n) => (
+              <ToggleButton
+                key={n}
+                value={n}
+                sx={{ px: 3, fontWeight: 600 }}
+              >
+                {n}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+            ~{(formData.scene_count ?? 3) * 8}s total
+          </Typography>
         </Box>
 
-        {/* Advanced options */}
+        {/* Image input section with tabs */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+            Product Image
+          </Typography>
+          <Tabs
+            value={imageTab}
+            onChange={(_, v) => {
+              setImageTab(v);
+              setImageError(null);
+            }}
+            sx={{ mb: 2, minHeight: 36 }}
+          >
+            <Tab
+              icon={<LinkIcon sx={{ fontSize: 16 }} />}
+              iconPosition="start"
+              label="URL"
+              sx={{ minHeight: 36, py: 0, textTransform: 'none' }}
+            />
+            <Tab
+              icon={<CloudUpload sx={{ fontSize: 16 }} />}
+              iconPosition="start"
+              label="Upload"
+              sx={{ minHeight: 36, py: 0, textTransform: 'none' }}
+            />
+            <Tab
+              icon={<AutoAwesome sx={{ fontSize: 16 }} />}
+              iconPosition="start"
+              label="AI Generate"
+              sx={{ minHeight: 36, py: 0, textTransform: 'none' }}
+            />
+          </Tabs>
+
+          {imageError && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setImageError(null)}>
+              {imageError}
+            </Alert>
+          )}
+
+          {/* Tab 0: URL */}
+          {imageTab === 0 && (
+            <TextField
+              label="Product Image URL"
+              value={formData.image_url}
+              onChange={(e) => {
+                setFormData((prev) => ({ ...prev, image_url: e.target.value }));
+                setImagePreview(e.target.value || null);
+                setSelectedSample(null);
+              }}
+              fullWidth
+              disabled={isLoading}
+              placeholder="https://example.com/product.png"
+              helperText={
+                selectedSample
+                  ? 'Using sample product image'
+                  : 'Enter a publicly accessible image URL'
+              }
+            />
+          )}
+
+          {/* Tab 1: Upload */}
+          {imageTab === 1 && (
+            <Box
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onClick={() => fileInputRef.current?.click()}
+              sx={{
+                border: '2px dashed',
+                borderColor: 'divider',
+                borderRadius: 2,
+                p: 4,
+                textAlign: 'center',
+                cursor: 'pointer',
+                transition: 'border-color 0.2s',
+                '&:hover': { borderColor: 'primary.main' },
+              }}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(file);
+                }}
+              />
+              {imageInputLoading ? (
+                <CircularProgress size={24} />
+              ) : (
+                <>
+                  <CloudUpload sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
+                  <Typography variant="body2" color="text.secondary">
+                    Drag & drop an image or click to browse
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Max 10MB — PNG, JPG, WebP
+                  </Typography>
+                </>
+              )}
+            </Box>
+          )}
+
+          {/* Tab 2: AI Generate */}
+          {imageTab === 2 && (
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <TextField
+                label="Describe the product"
+                value={generatePrompt}
+                onChange={(e) => setGeneratePrompt(e.target.value)}
+                fullWidth
+                disabled={isLoading || imageInputLoading}
+                placeholder="e.g. red wireless earbuds with charging case"
+              />
+              <Button
+                variant="contained"
+                onClick={handleGenerateImage}
+                disabled={isLoading || imageInputLoading || !generatePrompt.trim()}
+                startIcon={
+                  imageInputLoading ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <ImageIcon />
+                  )
+                }
+                sx={{ minWidth: 120, textTransform: 'none' }}
+              >
+                Generate
+              </Button>
+            </Box>
+          )}
+
+          {/* Image preview + auto-fill */}
+          {imagePreview && (
+            <Box sx={{ mt: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+              <Box
+                component="img"
+                src={imagePreview}
+                alt="Product preview"
+                sx={{
+                  width: 120,
+                  height: 120,
+                  objectFit: 'cover',
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+                onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleAutoFill}
+                disabled={isLoading || autoFillLoading || !formData.image_url}
+                startIcon={
+                  autoFillLoading ? (
+                    <CircularProgress size={14} color="inherit" />
+                  ) : (
+                    <AutoFixHigh />
+                  )
+                }
+                sx={{ textTransform: 'none', mt: 1 }}
+              >
+                Auto-fill with AI
+              </Button>
+            </Box>
+          )}
+        </Box>
+
+        {/* Advanced Options */}
         <Box sx={{ mb: 2 }}>
           <Button
             size="small"
@@ -367,32 +518,6 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
           </Button>
           <Collapse in={showAdvanced}>
             <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2.5, pl: 1 }}>
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                  Target Duration: {formData.target_duration ?? 30}s
-                </Typography>
-                <Slider
-                  value={formData.target_duration ?? 30}
-                  onChange={(_, value) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      target_duration: value as number,
-                    }))
-                  }
-                  min={15}
-                  max={60}
-                  step={5}
-                  marks={[
-                    { value: 15, label: '15s' },
-                    { value: 30, label: '30s' },
-                    { value: 45, label: '45s' },
-                    { value: 60, label: '60s' },
-                  ]}
-                  valueLabelDisplay="auto"
-                  disabled={isLoading}
-                  sx={{ maxWidth: 400 }}
-                />
-              </Box>
               <Box>
                 <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
                   Ad Tone
@@ -417,17 +542,28 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
                   ))}
                 </ToggleButtonGroup>
               </Box>
+              <FormControl size="small" sx={{ maxWidth: 320 }}>
+                <InputLabel>Gemini Model</InputLabel>
+                <Select
+                  value={formData.gemini_model ?? 'gemini-3-pro-preview'}
+                  label="Gemini Model"
+                  onChange={(e: SelectChangeEvent) =>
+                    setFormData((prev) => ({ ...prev, gemini_model: e.target.value }))
+                  }
+                  disabled={isLoading}
+                >
+                  {GEMINI_MODELS.map((model) => (
+                    <MenuItem key={model.id} value={model.id}>
+                      {model.label} — {model.description}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Box>
           </Collapse>
         </Box>
 
-        <Divider sx={{ my: 2 }}>
-          <Typography variant="caption" color="text.secondary">
-            or enter details manually
-          </Typography>
-        </Divider>
-
-        {/* Form */}
+        {/* Form fields */}
         <Box
           component="form"
           onSubmit={handleSubmit}
@@ -440,20 +576,6 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
             fullWidth
             required
             disabled={isLoading}
-          />
-
-          <TextField
-            label="Product Image URL"
-            value={formData.image_url}
-            onChange={handleChange('image_url')}
-            fullWidth
-            required
-            disabled={isLoading}
-            helperText={
-              selectedSample
-                ? 'Using sample product image'
-                : 'Enter a publicly accessible image URL'
-            }
           />
 
           <TextField

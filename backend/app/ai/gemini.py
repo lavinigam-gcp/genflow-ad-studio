@@ -53,8 +53,13 @@ class GeminiService:
         scene_count: int = 3,
         target_duration: int = 30,
         ad_tone: str = "energetic",
+        model_id: str | None = None,
     ) -> dict:
-        """Generate video script using Gemini 3 Pro with structured JSON output."""
+        """Generate video script using Gemini with structured JSON output.
+
+        Args:
+            model_id: Optional model override. Falls back to settings.gemini_model.
+        """
         user_prompt = SCRIPT_USER_PROMPT_TEMPLATE.format(
             product_name=product_name,
             specs=specs,
@@ -69,13 +74,38 @@ class GeminiService:
         text_part = types.Part.from_text(text=user_prompt)
 
         response = await self.client.aio.models.generate_content(
-            model=self.settings.gemini_model,
+            model=model_id or self.settings.gemini_model,
             contents=[image_part, text_part],
             config=types.GenerateContentConfig(
                 system_instruction=SCRIPT_SYSTEM_INSTRUCTION,
                 response_mime_type="application/json",
                 safety_settings=ALL_SAFETY_OFF,
                 temperature=1.0,
+            ),
+        )
+
+        return parse_json_response(response.text)
+
+    @async_retry(retries=3)
+    async def analyze_product_image(self, image_bytes: bytes) -> dict:
+        """Extract product name and specifications from an image using Flash model."""
+        prompt = (
+            "Analyze this product image and extract the following information. "
+            "Return ONLY valid JSON with no additional text.\n\n"
+            '{"product_name": "The product name", '
+            '"specifications": "Key specifications formatted as key: value lines"}'
+        )
+
+        image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/png")
+        text_part = types.Part.from_text(text=prompt)
+
+        response = await self.client.aio.models.generate_content(
+            model=self.settings.gemini_flash_model,
+            contents=[image_part, text_part],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                safety_settings=ALL_SAFETY_OFF,
+                temperature=0.5,
             ),
         )
 
