@@ -46,6 +46,7 @@ import {
 interface ProductFormProps {
   onSubmit: (request: ScriptRequest) => Promise<void>;
   isLoading: boolean;
+  readOnly?: boolean;
 }
 
 const AD_TONES = ['energetic', 'sophisticated', 'playful', 'authoritative', 'warm'];
@@ -57,7 +58,7 @@ const GEMINI_MODELS: GeminiModelOption[] = [
   { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Fastest' },
 ];
 
-export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
+export default function ProductForm({ onSubmit, isLoading, readOnly = false }: ProductFormProps) {
   const [formData, setFormData] = useState<ScriptRequest>({
     product_name: '',
     specifications: '',
@@ -236,7 +237,7 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
               <IconButton
                 size="small"
                 onClick={() => setScrollOffset((o) => Math.max(0, o - 1))}
-                disabled={scrollOffset === 0 || isLoading}
+                  disabled={scrollOffset === 0}
               >
                 <ChevronLeft />
               </IconButton>
@@ -262,8 +263,8 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
                     }}
                   >
                     <CardActionArea
-                      onClick={() => handleSelectSample(sample)}
-                      disabled={isLoading}
+                      onClick={() => !readOnly && handleSelectSample(sample)}
+                      disabled={isLoading || readOnly}
                     >
                       <CardMedia
                         component="img"
@@ -298,7 +299,7 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
               <IconButton
                 size="small"
                 onClick={() => setScrollOffset((o) => Math.min(maxOffset, o + 1))}
-                disabled={scrollOffset >= maxOffset || isLoading}
+                  disabled={scrollOffset >= maxOffset}
               >
                 <ChevronRight />
               </IconButton>
@@ -318,7 +319,7 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
               if (value !== null) setFormData((prev) => ({ ...prev, scene_count: value }));
             }}
             size="medium"
-            disabled={isLoading}
+            disabled={isLoading || readOnly}
           >
             {[2, 3, 4, 5, 6].map((n) => (
               <ToggleButton
@@ -385,7 +386,7 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
                 setSelectedSample(null);
               }}
               fullWidth
-              disabled={isLoading}
+              disabled={isLoading || readOnly}
               placeholder="https://example.com/product.png"
               helperText={
                 selectedSample
@@ -400,7 +401,7 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
             <Box
               onDrop={handleDrop}
               onDragOver={handleDragOver}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => !readOnly && fileInputRef.current?.click()}
               sx={{
                 border: '2px dashed',
                 borderColor: 'divider',
@@ -417,6 +418,7 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
                 type="file"
                 accept="image/*"
                 hidden
+                disabled={readOnly}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) handleFileUpload(file);
@@ -446,13 +448,13 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
                 value={generatePrompt}
                 onChange={(e) => setGeneratePrompt(e.target.value)}
                 fullWidth
-                disabled={isLoading || imageInputLoading}
+                disabled={isLoading || imageInputLoading || readOnly}
                 placeholder="e.g. red wireless earbuds with charging case"
               />
               <Button
                 variant="contained"
                 onClick={handleGenerateImage}
-                disabled={isLoading || imageInputLoading || !generatePrompt.trim()}
+                disabled={isLoading || imageInputLoading || !generatePrompt.trim() || readOnly}
                 startIcon={
                   imageInputLoading ? (
                     <CircularProgress size={16} color="inherit" />
@@ -490,7 +492,7 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
                 variant="outlined"
                 size="small"
                 onClick={handleAutoFill}
-                disabled={isLoading || autoFillLoading || !formData.image_url}
+                disabled={isLoading || autoFillLoading || !formData.image_url || readOnly}
                 startIcon={
                   autoFillLoading ? (
                     <CircularProgress size={14} color="inherit" />
@@ -529,7 +531,7 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
                     if (value) setFormData((prev) => ({ ...prev, ad_tone: value }));
                   }}
                   size="small"
-                  disabled={isLoading}
+                  disabled={isLoading || readOnly}
                 >
                   {AD_TONES.map((tone) => (
                     <ToggleButton
@@ -550,7 +552,7 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
                   onChange={(e: SelectChangeEvent) =>
                     setFormData((prev) => ({ ...prev, gemini_model: e.target.value }))
                   }
-                  disabled={isLoading}
+                  disabled={isLoading || readOnly}
                 >
                   {GEMINI_MODELS.map((model) => (
                     <MenuItem key={model.id} value={model.id}>
@@ -575,7 +577,7 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
             onChange={handleChange('product_name')}
             fullWidth
             required
-            disabled={isLoading}
+            disabled={isLoading || readOnly}
           />
 
           <TextField
@@ -586,7 +588,7 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
             required
             multiline
             rows={6}
-            disabled={isLoading}
+            disabled={isLoading || readOnly}
           />
 
           <Button
@@ -595,7 +597,7 @@ export default function ProductForm({ onSubmit, isLoading }: ProductFormProps) {
             color="primary"
             fullWidth
             disabled={
-              isLoading || !formData.product_name || !formData.image_url
+              isLoading || !formData.product_name || !formData.image_url || readOnly
             }
             startIcon={
               isLoading ? (

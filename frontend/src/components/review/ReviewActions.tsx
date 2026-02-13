@@ -16,9 +16,12 @@ interface ReviewActionsProps {
   onComplete?: () => void;
 }
 
-type ReviewAction = 'approve' | 'reject' | 'changes_requested';
+import { useNavigate } from 'react-router-dom';
+
+type ReviewAction = 'approved' | 'reject' | 'changes_requested';
 
 export default function ReviewActions({ runId, onComplete }: ReviewActionsProps) {
+  const navigate = useNavigate();
   const [selectedAction, setSelectedAction] = useState<ReviewAction | null>(null);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,9 +52,15 @@ export default function ReviewActions({ runId, onComplete }: ReviewActionsProps)
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
             Review Submitted
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 3 }}>
             Your review has been recorded.
           </Typography>
+          <Button
+            variant="outlined"
+            onClick={() => navigate('/review')}
+          >
+            Go to Review Queue
+          </Button>
         </CardContent>
       </Card>
     );
@@ -72,10 +81,10 @@ export default function ReviewActions({ runId, onComplete }: ReviewActionsProps)
 
         <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
           <Button
-            variant={selectedAction === 'approve' ? 'contained' : 'outlined'}
+            variant={selectedAction === 'approved' ? 'contained' : 'outlined'}
             color="success"
             startIcon={<CheckCircle />}
-            onClick={() => setSelectedAction('approve')}
+            onClick={() => setSelectedAction('approved')}
             sx={{ flex: 1 }}
           >
             Approve

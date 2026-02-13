@@ -191,6 +191,7 @@ def get_pipeline_service() -> PipelineService:
         storyboard_svc=get_storyboard_service(),
         video_svc=get_video_service(),
         stitch_svc=get_stitch_service(),
+        review_svc=get_review_service(),
         job_store=get_job_store(),
         event_broadcaster=get_broadcaster(),
     )

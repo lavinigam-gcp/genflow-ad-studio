@@ -14,9 +14,10 @@ dependencies = [
     "python-multipart>=0.0.12",
 ]
 
-[tool.setuptools.packages.find]
-include = ["app*"]
-
 [build-system]
-requires = ["setuptools>=75.0"]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["app"]
+py-modules = ["main"]

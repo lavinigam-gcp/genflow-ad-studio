@@ -26,6 +26,7 @@ interface ScriptEditorProps {
   onContinue: () => void;
   onUpdateScript?: (script: VideoScript) => Promise<void>;
   isLoading: boolean;
+  readOnly?: boolean;
 }
 
 export default function ScriptEditor({
@@ -33,6 +34,7 @@ export default function ScriptEditor({
   onContinue,
   onUpdateScript,
   isLoading,
+  readOnly = false,
 }: ScriptEditorProps) {
   const [mode, setMode] = useState<'view' | 'edit' | 'json'>('view');
   const [editJson, setEditJson] = useState(() => JSON.stringify(script, null, 2));
@@ -198,8 +200,8 @@ export default function ScriptEditor({
               <Box key={scene.scene_number}>
                 <SceneCard
                   scene={scene}
-                  isEditing={isEditing}
-                  onChange={(updated) => handleSceneChange(index, updated)}
+                  isEditing={isEditing && !readOnly}
+                  onChange={(updated) => !readOnly && handleSceneChange(index, updated)}
                 />
                 {/* Show transition indicator between scenes (not after last) */}
                 {index < displayScenes.length - 1 && (
@@ -207,8 +209,8 @@ export default function ScriptEditor({
                     transitionType={scene.transition_type ?? 'cut'}
                     transitionDuration={scene.transition_duration ?? 0.5}
                     audioContinuity={scene.audio_continuity ?? ''}
-                    isEditing={isEditing}
-                    onChange={(updates) => handleTransitionChange(index, updates)}
+                    isEditing={isEditing && !readOnly}
+                    onChange={(updates) => !readOnly && handleTransitionChange(index, updates)}
                   />
                 )}
               </Box>
@@ -217,7 +219,7 @@ export default function ScriptEditor({
         )}
 
         {/* Save button (visible when there are unsaved changes) */}
-        {hasChanges && onUpdateScript && (
+        {hasChanges && onUpdateScript && !readOnly && (
           <Button
             variant="outlined"
             color="primary"
@@ -236,7 +238,7 @@ export default function ScriptEditor({
           color="primary"
           fullWidth
           onClick={onContinue}
-          disabled={isLoading}
+          disabled={isLoading || readOnly}
           endIcon={<ArrowForward />}
           sx={{ mt: 2, py: 1.5 }}
         >

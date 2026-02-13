@@ -110,7 +110,7 @@ export async function listJobs(): Promise<Job[]> {
 
 export async function submitReview(
   runId: string,
-  action: 'approve' | 'reject' | 'changes_requested',
+  action: 'approved' | 'reject' | 'changes_requested',
   notes?: string,
 ): Promise<{ status: string }> {
   return api.post<{ status: string }>(`/review/${runId}/decision`, {

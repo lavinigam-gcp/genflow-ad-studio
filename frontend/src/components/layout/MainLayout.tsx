@@ -36,12 +36,44 @@ const STEPS = [
   'Review',
 ];
 
-function StepIcon({ active, completed, icon }: { active: boolean; completed: boolean; icon: React.ReactNode }) {
+function StepIcon({
+  active,
+  completed,
+  viewing,
+  icon
+}: {
+  active: boolean;
+  completed: boolean;
+  viewing?: boolean;
+  icon: React.ReactNode;
+}) {
+  // Active means "processing" in our new logic (spinner)
+  if (active) {
+    return <CircularProgress size={20} thickness={5} />;
+  }
   if (completed) {
     return <CheckCircle sx={{ color: 'success.main', fontSize: 24 }} />;
   }
-  if (active) {
-    return <CircularProgress size={20} thickness={5} />;
+  // Viewing means "currently on this step" but not processing
+  if (viewing) {
+    return (
+      <Box
+        sx={{
+          width: 24,
+          height: 24,
+          borderRadius: '50%',
+          backgroundColor: 'primary.main',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 12,
+          fontWeight: 500,
+          color: 'white',
+        }}
+      >
+        {icon}
+      </Box>
+    );
   }
   return (
     <Box
@@ -65,7 +97,29 @@ function StepIcon({ active, completed, icon }: { active: boolean; completed: boo
 
 export default function MainLayout() {
   const activeStep = usePipelineStore((s) => s.activeStep);
+  const setStep = usePipelineStore((s) => s.setStep);
   const isLoading = usePipelineStore((s) => s.isLoading);
+
+  // Get state to determine max reachable step
+  const runId = usePipelineStore((s) => s.runId);
+  const script = usePipelineStore((s) => s.script);
+  const avatarVariants = usePipelineStore((s) => s.avatarVariants);
+  const storyboardResults = usePipelineStore((s) => s.storyboardResults);
+  const videoResults = usePipelineStore((s) => s.videoResults);
+  const finalVideoPath = usePipelineStore((s) => s.finalVideoPath);
+
+  // Calculate max step based on data availability
+  let maxStep = 0;
+  if (runId) maxStep = 1;
+  if (script) maxStep = 2;
+  if (avatarVariants.length > 0) maxStep = 3;
+  if (storyboardResults.length > 0) maxStep = 4;
+  if (videoResults.length > 0) maxStep = 5;
+  if (finalVideoPath) maxStep = 6;
+
+  // Also consider activeStep explicitly set by the app (e.g. during processing)
+  maxStep = Math.max(maxStep, activeStep);
+
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -137,23 +191,64 @@ export default function MainLayout() {
           alternativeLabel
           sx={{ maxWidth: 900, mx: 'auto' }}
         >
-          {STEPS.map((label, index) => (
-            <Step key={label} completed={index < activeStep}>
-              <StepLabel
-                slots={{
-                  stepIcon: (props) => (
-                    <StepIcon
-                      active={index === activeStep && isLoading}
-                      completed={index < activeStep}
-                      icon={props.icon}
-                    />
-                  ),
+          {STEPS.map((label, index) => {
+            const canNavigate = index <= maxStep;
+
+            // Logic for visual states:
+            // - Loading: Only show spinner on the maxStep if loading
+            // - Completed: Steps before the maxStep are completed
+            // - Viewing: The user is currently looking at this step (index === activeStep)
+            const isProcessing = index === maxStep && isLoading;
+            const isCompleted = index < maxStep;
+            const isViewing = index === activeStep;
+
+            return (
+              <Step
+                key={label}
+                completed={isCompleted}
+                sx={{
+                  cursor: canNavigate ? 'pointer' : 'default',
+                  '& .MuiStepLabel-root': {
+                    cursor: canNavigate ? 'pointer' : 'default',
+                  }
+                }}
+                onClick={() => {
+                  if (canNavigate) {
+                    setStep(index);
+                  }
                 }}
               >
-                {label}
-              </StepLabel>
-            </Step>
-          ))}
+                <StepLabel
+                  slots={{
+                    stepIcon: (props) => (
+                      <StepIcon
+                        active={isProcessing}
+                        completed={isCompleted}
+                        viewing={isViewing}
+                        icon={props.icon}
+                      />
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiStepLabel-label': {
+                      fontWeight: isViewing ? 700 : 400,
+                      color: isViewing ? 'primary.main' : 'inherit',
+                    },
+                    '& .MuiStepLabel-label.Mui-completed': {
+                      color: isViewing ? 'primary.main' : 'inherit',
+                      fontWeight: isViewing ? 700 : 400,
+                    },
+                    '& .MuiStepLabel-label.Mui-active': {
+                      color: isViewing ? 'primary.main' : 'inherit',
+                      fontWeight: isViewing ? 700 : 400,
+                    },
+                  }}
+                >
+                  {label}
+                </StepLabel>
+              </Step>
+            );
+          })}
         </Stepper>
       </Box>
 

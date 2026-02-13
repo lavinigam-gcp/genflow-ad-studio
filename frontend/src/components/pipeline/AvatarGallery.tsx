@@ -18,6 +18,7 @@ interface AvatarGalleryProps {
   onRegenerate: () => void;
   onContinue: () => void;
   isLoading: boolean;
+  readOnly?: boolean;
 }
 
 export default function AvatarGallery({
@@ -27,6 +28,7 @@ export default function AvatarGallery({
   onRegenerate,
   onContinue,
   isLoading,
+  readOnly = false,
 }: AvatarGalleryProps) {
   if (isLoading && variants.length === 0) {
     return (
@@ -55,9 +57,9 @@ export default function AvatarGallery({
         {variants.map((variant) => (
           <Grid size={{ xs: 12, sm: 6, md: 3 }} key={variant.index}>
             <Card
-              onClick={() => onSelect(variant.index)}
+              onClick={() => !readOnly && onSelect(variant.index)}
               sx={{
-                cursor: 'pointer',
+                cursor: readOnly ? 'default' : 'pointer',
                 border: selectedIndex === variant.index
                   ? '3px solid #1A73E8'
                   : '1px solid #DADCE0',
@@ -89,7 +91,7 @@ export default function AvatarGallery({
         <Button
           variant="outlined"
           onClick={onRegenerate}
-          disabled={isLoading}
+          disabled={isLoading || readOnly}
           startIcon={<Refresh />}
         >
           Regenerate Avatars
@@ -98,7 +100,7 @@ export default function AvatarGallery({
           variant="contained"
           color="primary"
           onClick={onContinue}
-          disabled={selectedIndex === null || isLoading}
+          disabled={selectedIndex === null || isLoading || readOnly}
           endIcon={<ArrowForward />}
           sx={{ flex: 1 }}
         >

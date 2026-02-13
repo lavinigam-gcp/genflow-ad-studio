@@ -18,6 +18,7 @@ interface VideoPlayerProps {
   onContinue: () => void;
   onSelectVariant?: (sceneNumber: number, variantIndex: number) => void;
   isLoading: boolean;
+  readOnly?: boolean;
 }
 
 function getOverallScore(report: NonNullable<import('../../types').VideoQCReport>): number {
@@ -36,6 +37,7 @@ export default function VideoPlayer({
   onContinue,
   onSelectVariant,
   isLoading,
+  readOnly = false,
 }: VideoPlayerProps) {
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
@@ -43,7 +45,7 @@ export default function VideoPlayer({
         <Typography variant="h5" sx={{ fontWeight: 600 }}>
           Video Variants
         </Typography>
-        {onSelectVariant && (
+        {onSelectVariant && !readOnly && (
           <Typography variant="body2" color="text.secondary">
             Click a variant to select it for the final video
           </Typography>
@@ -138,14 +140,14 @@ export default function VideoPlayer({
                     sx={{
                       border: isSelected ? '3px solid #1A73E8' : '1px solid #DADCE0',
                       position: 'relative',
-                      cursor: onSelectVariant ? 'pointer' : 'default',
+                      cursor: onSelectVariant && !readOnly ? 'pointer' : 'default',
                       transition: 'border-color 0.15s',
-                      '&:hover': onSelectVariant
+                      '&:hover': onSelectVariant && !readOnly
                         ? { borderColor: isSelected ? '#1A73E8' : '#1A73E8AA' }
                         : {},
                     }}
                   >
-                    {onSelectVariant ? (
+                    {onSelectVariant && !readOnly ? (
                       <CardActionArea
                         onClick={() => onSelectVariant(sceneResult.scene_number, variant.index)}
                         disabled={isLoading}
@@ -169,7 +171,7 @@ export default function VideoPlayer({
         color="primary"
         fullWidth
         onClick={onContinue}
-        disabled={isLoading}
+        disabled={isLoading || readOnly}
         endIcon={<ArrowForward />}
         sx={{ py: 1.5 }}
       >

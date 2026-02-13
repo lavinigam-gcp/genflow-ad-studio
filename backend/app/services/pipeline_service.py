@@ -7,6 +7,7 @@ from app.models.job import JobStatus, JobStep
 from app.models.script import ScriptRequest
 from app.models.sse import SSEEventType
 from app.services.avatar_service import AvatarService
+from app.services.review_service import ReviewService
 from app.services.script_service import ScriptService
 from app.services.stitch_service import StitchService
 from app.services.storyboard_service import StoryboardService
@@ -15,7 +16,7 @@ from app.services.video_service import VideoService
 logger = logging.getLogger(__name__)
 
 # How long to wait between checks for avatar selection (seconds)
-_AVATAR_POLL_INTERVAL = 2.0
+_AVATAR_POLL_INTERVAL = 1.0
 # Maximum time to wait for avatar selection (seconds)
 _AVATAR_WAIT_TIMEOUT = 600.0
 
@@ -28,6 +29,7 @@ class PipelineService:
         storyboard_svc: StoryboardService,
         video_svc: VideoService,
         stitch_svc: StitchService,
+        review_svc: ReviewService,
         job_store: JobStore,
         event_broadcaster: SSEBroadcaster,
     ):
@@ -36,6 +38,7 @@ class PipelineService:
         self.storyboard_svc = storyboard_svc
         self.video_svc = video_svc
         self.stitch_svc = stitch_svc
+        self.review_svc = review_svc
         self.job_store = job_store
         self.broadcaster = event_broadcaster
 
@@ -163,6 +166,9 @@ class PipelineService:
             self.broadcaster.emit(job_id, SSEEventType.STEP_STARTED, {"step": "stitch"})
 
             final_path = await self.stitch_svc.stitch_videos(run_id=run_id)
+
+            # Create pending review
+            self.review_svc.create_review(job_id)
 
             self.job_store.update_job(job_id, final_video_path=final_path)
             self.broadcaster.emit(

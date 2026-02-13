@@ -17,9 +17,10 @@ interface StoryboardGridProps {
   results: StoryboardResult[];
   onContinue: () => void;
   isLoading: boolean;
+  readOnly?: boolean;
 }
 
-export default function StoryboardGrid({ results, onContinue, isLoading }: StoryboardGridProps) {
+export default function StoryboardGrid({ results, onContinue, isLoading, readOnly = false }: StoryboardGridProps) {
   const avgAvatarScore =
     results.length > 0
       ? Math.round(
@@ -126,7 +127,7 @@ export default function StoryboardGrid({ results, onContinue, isLoading }: Story
         color="primary"
         fullWidth
         onClick={onContinue}
-        disabled={isLoading}
+        disabled={isLoading || readOnly}
         endIcon={<ArrowForward />}
         sx={{ mt: 3, py: 1.5 }}
       >
