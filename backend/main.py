@@ -7,9 +7,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api import assets, bulk, config_api, input, jobs, pipeline, review
+from app.api import assets, bulk, config_api, input, jobs, logs, pipeline, review
 from app.api.health import router as health_router
-from app.dependencies import get_broadcaster, get_job_store, get_task_runner
+from app.db_migrate import migrate_from_json
+from app.dependencies import get_broadcaster, get_database, get_job_store, get_task_runner
 
 logging.basicConfig(
     level=logging.INFO,
@@ -25,6 +26,7 @@ async def lifespan(app: FastAPI):
     output_dir.mkdir(exist_ok=True)
 
     # Initialize singletons on startup
+    migrate_from_json(get_database())
     get_job_store()
     get_broadcaster()
     get_task_runner()
@@ -62,6 +64,12 @@ app.include_router(review.router)
 app.include_router(assets.router)
 app.include_router(config_api.router)
 app.include_router(input.router)
+app.include_router(logs.router)
+
+# Serve production frontend build if available
+_static_path = _backend_dir / "static"
+if _static_path.is_dir():
+    app.mount("/", StaticFiles(directory=str(_static_path), html=True), name="frontend")
 
 if __name__ == "__main__":
     import uvicorn

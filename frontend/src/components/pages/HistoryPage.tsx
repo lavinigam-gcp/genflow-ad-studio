@@ -12,8 +12,13 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Button,
+  CircularProgress,
 } from '@mui/material';
-import { listJobs } from '../../api/pipeline';
+import { PlayArrow } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+import { listJobs, getJob } from '../../api/pipeline';
+import { usePipelineStore } from '../../store/pipelineStore';
 import { JobStatus, type Job } from '../../types';
 import ErrorBoundary from '../common/ErrorBoundary';
 
@@ -35,6 +40,8 @@ function getStatusColor(status: JobStatus): 'default' | 'primary' | 'success' | 
 export default function HistoryPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [resumingId, setResumingId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetch = async () => {
@@ -49,6 +56,19 @@ export default function HistoryPage() {
     };
     fetch();
   }, []);
+
+  const handleResume = async (jobId: string) => {
+    setResumingId(jobId);
+    try {
+      const job = await getJob(jobId);
+      usePipelineStore.getState().loadJob(job);
+      usePipelineStore.getState().addLog(`Loaded run ${jobId}`, 'info');
+      navigate('/');
+    } catch {
+      // Failed to load — stay on page
+      setResumingId(null);
+    }
+  };
 
   return (
     <ErrorBoundary>
@@ -75,11 +95,17 @@ export default function HistoryPage() {
                   <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Created</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Updated</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {jobs.map((job) => (
-                  <TableRow key={job.job_id} hover>
+                  <TableRow
+                    key={job.job_id}
+                    hover
+                    sx={{ cursor: 'pointer' }}
+                    onClick={() => handleResume(job.job_id)}
+                  >
                     <TableCell>
                       <Typography variant="body2" sx={{ fontFamily: '"Roboto Mono", monospace', fontSize: 12 }}>
                         {job.job_id.slice(0, 12)}
@@ -105,6 +131,27 @@ export default function HistoryPage() {
                       <Typography variant="body2" color="text.secondary">
                         {new Date(job.updated_at).toLocaleString()}
                       </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={
+                          resumingId === job.job_id ? (
+                            <CircularProgress size={14} color="inherit" />
+                          ) : (
+                            <PlayArrow />
+                          )
+                        }
+                        disabled={resumingId !== null}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleResume(job.job_id);
+                        }}
+                        sx={{ textTransform: 'none' }}
+                      >
+                        Resume
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

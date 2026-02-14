@@ -27,7 +27,7 @@ export default function SceneCard({ scene, isEditing, onChange }: SceneCardProps
   };
 
   return (
-    <Card variant="outlined" sx={{ borderColor: '#DADCE0', backgroundColor: '#F8F9FA' }}>
+    <Card variant="outlined" sx={{ borderColor: '#DADCE0', backgroundColor: '#F8F9FA', borderLeft: '3px solid #1A73E8' }}>
       <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
         {/* Header row: scene number, scene type, duration */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>

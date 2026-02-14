@@ -81,6 +81,8 @@ class ScriptService:
             target_duration=target_duration,
             ad_tone=request.ad_tone,
             model_id=request.gemini_model,
+            max_words=request.max_dialogue_words_per_scene,
+            custom_instructions=request.custom_instructions,
         )
 
         # Parse into VideoScript model

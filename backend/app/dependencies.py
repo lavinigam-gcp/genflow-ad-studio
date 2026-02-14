@@ -8,12 +8,14 @@ from app.ai.gemini_image import GeminiImageService
 from app.ai.veo import VeoService
 from app.config import Settings
 from app.config import get_settings as _get_settings
+from app.db import Database
 from app.jobs.events import SSEBroadcaster
 from app.jobs.runner import TaskRunner
 from app.jobs.store import JobStore
 from app.services.avatar_service import AvatarService
 from app.services.bulk_service import BulkService
 from app.services.input_service import InputService
+from app.services.log_service import LogService
 from app.services.pipeline_service import PipelineService
 from app.services.qc_service import QCService
 from app.services.review_service import ReviewService
@@ -49,16 +51,25 @@ def get_storage_client() -> storage.Client:
 # Singletons for job infrastructure
 # ---------------------------------------------------------------------------
 
+_database: Database | None = None
 _job_store: JobStore | None = None
 _broadcaster: SSEBroadcaster | None = None
 _task_runner: TaskRunner | None = None
 _review_service: ReviewService | None = None
+_log_service: LogService | None = None
+
+
+def get_database() -> Database:
+    global _database
+    if _database is None:
+        _database = Database()
+    return _database
 
 
 def get_job_store() -> JobStore:
     global _job_store
     if _job_store is None:
-        _job_store = JobStore()
+        _job_store = JobStore(db=get_database())
     return _job_store
 
 
@@ -180,8 +191,15 @@ def get_stitch_service() -> StitchService:
 def get_review_service() -> ReviewService:
     global _review_service
     if _review_service is None:
-        _review_service = ReviewService()
+        _review_service = ReviewService(db=get_database())
     return _review_service
+
+
+def get_log_service() -> LogService:
+    global _log_service
+    if _log_service is None:
+        _log_service = LogService(db=get_database())
+    return _log_service
 
 
 def get_pipeline_service() -> PipelineService:

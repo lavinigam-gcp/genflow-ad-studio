@@ -142,6 +142,7 @@ export default function VideoPlayer({
                       position: 'relative',
                       cursor: onSelectVariant && !readOnly ? 'pointer' : 'default',
                       transition: 'border-color 0.15s',
+                      animation: 'scaleIn 0.3s ease',
                       '&:hover': onSelectVariant && !readOnly
                         ? { borderColor: isSelected ? '#1A73E8' : '#1A73E8AA' }
                         : {},

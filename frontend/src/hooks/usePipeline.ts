@@ -10,14 +10,16 @@ export function usePipeline() {
     async (request: ScriptRequest) => {
       store.setLoading(true);
       store.setError(null);
-      store.addLog(`Starting pipeline for "${request.product_name}"`, 'info');
+      store.addLog(`Starting script generation (model: ${request.gemini_model || 'gemini-3-flash-preview'})...`, 'info');
 
       try {
+        const t0 = Date.now();
         const response = await pipelineApi.generateScript(request);
         store.setRunId(response.run_id);
         store.setScript(response.script);
         store.setStep(1);
-        store.addLog('Script generated successfully', 'success');
+        const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+        store.addLog(`Script generated in ${elapsed}s`, 'success');
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to generate script';
         store.setError(message);
@@ -54,25 +56,26 @@ export function usePipeline() {
   }, [store]);
 
   const confirmAvatarSelection = useCallback(async () => {
-    const { runId, selectedAvatarIndex } = usePipelineStore.getState();
+    const { runId, selectedAvatarIndex, script: currentScript } = usePipelineStore.getState();
     if (!runId || selectedAvatarIndex === null) return;
     store.setLoading(true);
     store.setError(null);
-    store.addLog(`Selecting avatar variant ${selectedAvatarIndex}`, 'info');
+    store.addLog(`Selecting avatar variant ${selectedAvatarIndex}${currentScript ? `, preparing ${currentScript.scenes.length} scene storyboard` : ''}`, 'info');
 
     try {
       await pipelineApi.selectAvatar(runId, selectedAvatarIndex);
       store.setStep(3);
       store.addLog('Avatar selected, generating storyboard...', 'success');
 
-      // Auto-start storyboard generation after avatar selection
       const { script } = usePipelineStore.getState();
       if (script) {
         store.addLog('Generating storyboard with QC...', 'info');
+        const t0 = Date.now();
         const sbResponse = await pipelineApi.generateStoryboard(runId, script.scenes);
         store.setStoryboard(sbResponse.results);
+        const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
         store.addLog(
-          `Storyboard generated: ${sbResponse.results.length} scenes`,
+          `Storyboard generated: ${sbResponse.results.length} scenes in ${elapsed}s`,
           'success',
         );
       }
@@ -90,9 +93,10 @@ export function usePipeline() {
     if (!runId || !script || storyboardResults.length === 0) return;
     store.setLoading(true);
     store.setError(null);
-    store.addLog('Generating video variants with Veo 3.1...', 'info');
+    store.addLog(`Generating video variants with Veo 3.1 for ${storyboardResults.length} scenes...`, 'info');
 
     try {
+      const t0 = Date.now();
       const response = await pipelineApi.generateVideo(
         runId,
         storyboardResults,
@@ -101,7 +105,8 @@ export function usePipeline() {
       );
       store.setVideos(response.results);
       store.setStep(4);
-      store.addLog(`Videos generated for ${response.results.length} scenes`, 'success');
+      const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+      store.addLog(`Videos generated for ${response.results.length} scenes in ${elapsed}s`, 'success');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to generate videos';
       store.setError(message);
@@ -112,17 +117,19 @@ export function usePipeline() {
   }, [store]);
 
   const stitchFinalVideo = useCallback(async () => {
-    const { runId } = usePipelineStore.getState();
+    const { runId, script: currentScript } = usePipelineStore.getState();
     if (!runId) return;
     store.setLoading(true);
     store.setError(null);
-    store.addLog('Stitching final video with FFmpeg...', 'info');
+    store.addLog(`Stitching ${currentScript?.scenes.length || '?'} scenes into final video with FFmpeg...`, 'info');
 
     try {
+      const t0 = Date.now();
       const response = await pipelineApi.stitchVideo(runId);
       store.setFinalVideo(response.path);
       store.setStep(5);
-      store.addLog('Final video ready', 'success');
+      const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+      store.addLog(`Final video ready in ${elapsed}s`, 'success');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to stitch video';
       store.setError(message);
@@ -187,6 +194,22 @@ export function usePipeline() {
     store.addLog('Submitted for review', 'info');
   }, [store]);
 
+  const loadJob = useCallback(async (jobId: string) => {
+    store.setLoading(true);
+    store.setError(null);
+    try {
+      const job = await pipelineApi.getJob(jobId);
+      store.loadJob(job);
+      store.addLog(`Loaded run ${jobId}`, 'info');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load job';
+      store.setError(message);
+      store.addLog(message, 'error');
+    } finally {
+      store.setLoading(false);
+    }
+  }, [store]);
+
   return {
     ...store,
     startPipeline,
@@ -197,5 +220,6 @@ export function usePipeline() {
     selectVideoVariant,
     stitchFinalVideo,
     submitForReview,
+    loadJob,
   };
 }

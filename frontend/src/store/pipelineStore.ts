@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type {
+  Job,
   VideoScript,
   AvatarVariant,
   StoryboardResult,
@@ -32,6 +33,7 @@ interface PipelineState {
   addLog: (message: string, level: LogEntry['level']) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  loadJob: (job: Job) => void;
   reset: () => void;
 }
 
@@ -92,6 +94,30 @@ export const usePipelineStore = create<PipelineState>((set) => ({
   setLoading: (loading) => set({ isLoading: loading }),
 
   setError: (error) => set({ error }),
+
+  loadJob: (job) => {
+    // Compute the furthest step with data
+    let step = 0;
+    if (job.script) step = 1;
+    if (job.avatar_variants && job.avatar_variants.length > 0) step = 2;
+    if (job.storyboard_results && job.storyboard_results.length > 0) step = 3;
+    if (job.video_results && job.video_results.length > 0) step = 4;
+    if (job.final_video_path) step = 5;
+
+    set({
+      runId: job.job_id,
+      script: job.script ?? null,
+      avatarVariants: job.avatar_variants ?? [],
+      selectedAvatarIndex: null,
+      storyboardResults: job.storyboard_results ?? [],
+      videoResults: job.video_results ?? [],
+      finalVideoPath: job.final_video_path ?? null,
+      activeStep: step,
+      logs: [],
+      isLoading: false,
+      error: null,
+    });
+  },
 
   reset: () => set(initialState),
 }));

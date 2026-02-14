@@ -6,6 +6,7 @@ import PipelinePage from './components/pages/PipelinePage';
 import BulkPage from './components/pages/BulkPage';
 import ReviewPage from './components/pages/ReviewPage';
 import HistoryPage from './components/pages/HistoryPage';
+import HowItWorksPage from './components/pages/HowItWorksPage';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
             <Route path="/bulk" element={<BulkPage />} />
             <Route path="/review" element={<ReviewPage />} />
             <Route path="/history" element={<HistoryPage />} />
+            <Route path="/how-it-works" element={<HowItWorksPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

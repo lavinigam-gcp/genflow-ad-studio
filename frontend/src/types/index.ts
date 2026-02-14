@@ -5,6 +5,8 @@ export interface ScriptRequest {
   scene_count?: number;
   ad_tone?: string;
   gemini_model?: string;
+  max_dialogue_words_per_scene?: number;
+  custom_instructions?: string;
 }
 
 export interface AvatarProfile {
@@ -165,6 +167,15 @@ export interface LogEntry {
   timestamp: string;
   message: string;
   level: 'info' | 'success' | 'error' | 'warn' | 'dim';
+}
+
+export interface PipelineLog {
+  id: number;
+  job_id: string;
+  timestamp: string;
+  level: string;
+  message: string;
+  metadata?: Record<string, unknown>;
 }
 
 export enum ReviewStatus {

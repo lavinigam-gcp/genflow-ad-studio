@@ -21,6 +21,7 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Slider,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import {
@@ -52,8 +53,8 @@ interface ProductFormProps {
 const AD_TONES = ['energetic', 'sophisticated', 'playful', 'authoritative', 'warm'];
 
 const GEMINI_MODELS: GeminiModelOption[] = [
-  { id: 'gemini-3-pro-preview', label: 'Gemini 3 Pro', description: 'Best quality (default)' },
-  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash', description: 'Faster' },
+  { id: 'gemini-3-pro-preview', label: 'Gemini 3 Pro', description: 'Premium quality' },
+  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash', description: 'Fast & capable (default)' },
   { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', description: 'Stable' },
   { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Fastest' },
 ];
@@ -65,7 +66,7 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false }: P
     image_url: '',
     scene_count: 3,
     ad_tone: 'energetic',
-    gemini_model: 'gemini-3-pro-preview',
+    gemini_model: 'gemini-3-flash-preview',
   });
   const [selectedSample, setSelectedSample] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -202,7 +203,7 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false }: P
   };
 
   return (
-    <Card sx={{ maxWidth: 800, mx: 'auto' }}>
+    <Card sx={{ maxWidth: 800, mx: 'auto', borderTop: '3px solid #1A73E8' }}>
       <CardContent sx={{ p: 4 }}>
         <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
           Create Video Campaign
@@ -260,6 +261,7 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false }: P
                       borderColor:
                         selectedSample === sample.id ? 'primary.main' : 'divider',
                       transition: 'all 0.15s',
+                      animation: 'fadeInUp 0.4s ease',
                     }}
                   >
                     <CardActionArea
@@ -325,7 +327,15 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false }: P
               <ToggleButton
                 key={n}
                 value={n}
-                sx={{ px: 3, fontWeight: 600 }}
+                sx={{
+                  px: 3,
+                  fontWeight: 600,
+                  '&.Mui-selected': {
+                    backgroundColor: '#1A73E8',
+                    color: '#FFFFFF',
+                    '&:hover': { backgroundColor: '#1558B0' },
+                  },
+                }}
               >
                 {n}
               </ToggleButton>
@@ -334,6 +344,18 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false }: P
           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
             ~{(formData.scene_count ?? 3) * 8}s total
           </Typography>
+        </Box>
+
+        {/* Model chip — always visible, expands Advanced Options on click */}
+        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
+          <Chip
+            icon={<AutoAwesome />}
+            label={GEMINI_MODELS.find((m) => m.id === formData.gemini_model)?.label ?? 'Gemini 3 Flash'}
+            variant="outlined"
+            size="small"
+            onClick={() => setShowAdvanced(true)}
+            sx={{ cursor: 'pointer' }}
+          />
         </Box>
 
         {/* Image input section with tabs */}
@@ -537,7 +559,15 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false }: P
                     <ToggleButton
                       key={tone}
                       value={tone}
-                      sx={{ textTransform: 'capitalize', px: 2 }}
+                      sx={{
+                        textTransform: 'capitalize',
+                        px: 2,
+                        '&.Mui-selected': {
+                          backgroundColor: '#1A73E8',
+                          color: '#FFFFFF',
+                          '&:hover': { backgroundColor: '#1558B0' },
+                        },
+                      }}
                     >
                       {tone}
                     </ToggleButton>
@@ -547,7 +577,7 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false }: P
               <FormControl size="small" sx={{ maxWidth: 320 }}>
                 <InputLabel>Gemini Model</InputLabel>
                 <Select
-                  value={formData.gemini_model ?? 'gemini-3-pro-preview'}
+                  value={formData.gemini_model ?? 'gemini-3-flash-preview'}
                   label="Gemini Model"
                   onChange={(e: SelectChangeEvent) =>
                     setFormData((prev) => ({ ...prev, gemini_model: e.target.value }))
@@ -561,6 +591,39 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false }: P
                   ))}
                 </Select>
               </FormControl>
+              <Box sx={{ maxWidth: 320 }}>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                  Max Dialogue Words / Scene: {formData.max_dialogue_words_per_scene ?? 25}
+                </Typography>
+                <Slider
+                  value={formData.max_dialogue_words_per_scene ?? 25}
+                  onChange={(_, value) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      max_dialogue_words_per_scene: value as number,
+                    }))
+                  }
+                  min={10}
+                  max={50}
+                  step={5}
+                  marks
+                  valueLabelDisplay="auto"
+                  disabled={isLoading || readOnly}
+                />
+              </Box>
+              <TextField
+                label="Custom Instructions (optional)"
+                value={formData.custom_instructions || ''}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, custom_instructions: e.target.value }))
+                }
+                fullWidth
+                multiline
+                rows={3}
+                disabled={isLoading || readOnly}
+                placeholder="e.g. Focus on sustainability features, use humor, target Gen-Z audience..."
+                helperText="Additional creative direction for the AI script writer"
+              />
             </Box>
           </Collapse>
         </Box>
@@ -608,7 +671,7 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false }: P
             }
             sx={{ py: 1.5, fontSize: '1rem' }}
           >
-            {isLoading ? 'Generating...' : 'Generate Campaign'}
+            {isLoading ? 'Generating Script...' : 'Generate Script'}
           </Button>
         </Box>
       </CardContent>

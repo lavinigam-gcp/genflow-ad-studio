@@ -14,6 +14,7 @@ import type {
   GenerateImageResponse,
   AnalyzeImageResponse,
   SampleProduct,
+  PipelineLog,
 } from '../types';
 
 export async function generateScript(request: ScriptRequest): Promise<ScriptResponse> {
@@ -143,4 +144,8 @@ export async function analyzeImage(
 
 export async function listSamples(): Promise<{ samples: SampleProduct[] }> {
   return api.post<{ samples: SampleProduct[] }>('/input/samples');
+}
+
+export async function listLogs(jobId: string): Promise<{ logs: PipelineLog[] }> {
+  return api.post<{ logs: PipelineLog[] }>('/logs/list', { job_id: jobId });
 }

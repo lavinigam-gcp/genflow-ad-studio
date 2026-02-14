@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     gcs_bucket_name: str = ""
 
     gemini_model: str = Field(
-        default="gemini-3-pro-preview",
+        default="gemini-3-flash-preview",
         validation_alias=AliasChoices("gemini_model", "GEMINI_MODEL"),
     )
     gemini_flash_model: str = "gemini-3-flash-preview"

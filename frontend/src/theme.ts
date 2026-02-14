@@ -89,6 +89,12 @@ export const theme = createTheme({
             boxShadow: 'none',
           },
         },
+        containedPrimary: {
+          background: 'linear-gradient(135deg, #1A73E8 0%, #4285F4 100%)',
+          '&:hover': {
+            background: 'linear-gradient(135deg, #1558B0 0%, #3B78DB 100%)',
+          },
+        },
       },
     },
     MuiCard: {
@@ -97,6 +103,12 @@ export const theme = createTheme({
           borderRadius: 12,
           border: '1px solid #DADCE0',
           boxShadow: 'none',
+          transition: 'all 0.2s ease',
+          '&:hover': {
+            boxShadow: '0 4px 16px rgba(26,115,232,0.12)',
+            borderColor: '#B4D0F0',
+            transform: 'translateY(-1px)',
+          },
         },
       },
     },
@@ -112,6 +124,7 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 16,
+          fontWeight: 500,
         },
       },
     },
@@ -134,6 +147,7 @@ export const theme = createTheme({
       styleOverrides: {
         line: {
           borderColor: '#DADCE0',
+          borderTopWidth: 2,
         },
       },
     },
@@ -141,6 +155,15 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 4,
+        },
+      },
+    },
+    MuiTableHead: {
+      styleOverrides: {
+        root: {
+          '& .MuiTableCell-head': {
+            backgroundColor: '#F1F3F4',
+          },
         },
       },
     },

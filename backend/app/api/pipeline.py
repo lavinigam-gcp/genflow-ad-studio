@@ -14,6 +14,7 @@ from app.dependencies import (
 )
 from app.jobs.runner import TaskRunner
 from app.jobs.store import JobStore
+from app.models.job import JobStatus
 from app.models.avatar import (
     AvatarRequest,
     AvatarResponse,
@@ -52,10 +53,15 @@ async def start_pipeline(
 async def generate_script(
     request: ScriptRequest,
     script_svc: ScriptService = Depends(get_script_service),
+    job_store: JobStore = Depends(get_job_store),
 ) -> ScriptResponse:
-    """Generate script only (synchronous)."""
+    """Generate script only (synchronous). Creates a job for persistence."""
     try:
-        return await script_svc.generate_script(request)
+        response = await script_svc.generate_script(request)
+        # Create job using run_id so file paths and job_id match
+        job_store.create_job(request, job_id=response.run_id)
+        job_store.update_job(response.run_id, script=response.script, status=JobStatus.RUNNING)
+        return response
     except Exception as exc:
         logger.exception("Script generation failed")
         raise HTTPException(status_code=500, detail=str(exc))
@@ -81,13 +87,17 @@ async def update_script(
 async def generate_avatars(
     request: AvatarRequest,
     avatar_svc: AvatarService = Depends(get_avatar_service),
+    job_store: JobStore = Depends(get_job_store),
 ) -> AvatarResponse:
     """Generate avatar variants."""
     try:
-        return await avatar_svc.generate_avatars(
+        response = await avatar_svc.generate_avatars(
             run_id=request.run_id,
             avatar_profile=request.avatar_profile,
         )
+        if job_store.get_job(request.run_id):
+            job_store.update_job(request.run_id, avatar_variants=response.variants)
+        return response
     except Exception as exc:
         logger.exception("Avatar generation failed")
         raise HTTPException(status_code=500, detail=str(exc))
@@ -129,13 +139,17 @@ async def select_avatar(
 async def generate_storyboard(
     request: StoryboardRequest,
     storyboard_svc: StoryboardService = Depends(get_storyboard_service),
+    job_store: JobStore = Depends(get_job_store),
 ) -> StoryboardResponse:
     """Generate storyboard with QC feedback loop."""
     try:
-        return await storyboard_svc.generate_storyboard(
+        response = await storyboard_svc.generate_storyboard(
             run_id=request.run_id,
             scenes=request.scenes,
         )
+        if job_store.get_job(request.run_id):
+            job_store.update_job(request.run_id, storyboard_results=response.results)
+        return response
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except Exception as exc:
@@ -147,15 +161,19 @@ async def generate_storyboard(
 async def generate_video(
     request: VideoRequest,
     video_svc: VideoService = Depends(get_video_service),
+    job_store: JobStore = Depends(get_job_store),
 ) -> VideoResponse:
     """Generate video variants with QC and auto-selection."""
     try:
-        return await video_svc.generate_videos(
+        response = await video_svc.generate_videos(
             run_id=request.run_id,
             scenes_data=request.scenes_data,
             script_scenes=request.script_scenes,
             avatar_profile=request.avatar_profile,
         )
+        if job_store.get_job(request.run_id):
+            job_store.update_job(request.run_id, video_results=response.results)
+        return response
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except Exception as exc:
@@ -187,10 +205,13 @@ async def select_video_variant(
 async def stitch_video(
     run_id: str,
     stitch_svc: StitchService = Depends(get_stitch_service),
+    job_store: JobStore = Depends(get_job_store),
 ) -> dict:
     """Stitch scene videos into final commercial."""
     try:
         path = await stitch_svc.stitch_videos(run_id=run_id)
+        if job_store.get_job(run_id):
+            job_store.update_job(run_id, final_video_path=path, status=JobStatus.COMPLETED)
         return {"status": "success", "path": path}
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))

@@ -63,9 +63,9 @@ export default function AvatarGallery({
                 border: selectedIndex === variant.index
                   ? '3px solid #1A73E8'
                   : '1px solid #DADCE0',
-                transition: 'border-color 0.2s, transform 0.2s',
+                transition: 'border-color 0.2s, transform 0.2s ease',
                 '&:hover': {
-                  transform: 'translateY(-2px)',
+                  transform: 'translateY(-2px) scale(1.02)',
                   borderColor: selectedIndex === variant.index ? '#1A73E8' : '#9AA0A6',
                 },
               }}

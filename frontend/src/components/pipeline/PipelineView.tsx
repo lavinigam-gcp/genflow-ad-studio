@@ -1,3 +1,6 @@
+import type React from 'react';
+import { Box, Typography, Button, IconButton, Tooltip } from '@mui/material';
+import { AddCircleOutline, ContentCopy } from '@mui/icons-material';
 import ProductForm from './ProductForm';
 import ScriptEditor from './ScriptEditor';
 import AvatarGallery from './AvatarGallery';
@@ -5,20 +8,14 @@ import StoryboardGrid from './StoryboardGrid';
 import VideoPlayer from './VideoPlayer';
 import FinalPlayer from './FinalPlayer';
 import ReviewActions from '../review/ReviewActions';
+import PipelineInsight from '../common/PipelineInsight';
 import { usePipeline } from '../../hooks/usePipeline';
+
+const STEP_NAMES = ['Analyzing Input', 'Generating Script', 'Generating Avatar', 'Creating Storyboard', 'Generating Videos', 'Stitching Video', 'Reviewing'];
 
 export default function PipelineView() {
   const pipeline = usePipeline();
 
-  /* Navigation / Read-Only Logic 
-   * A step is read-only if we have progressed past it or if I am viewing a previous step.
-   * Actually, `MainLayout` handles the "visual" state, but `PipelineView` needs to handle the "interactive" state.
-   * If `activeStep` (viewing) < `maxStep` (derived), strictly speaking we are in read-only mode for that step?
-   * BUT `PipelineView` doesn't know `maxStep` easily unless we pass it or derive it again.
-   * Let's derive it again or use the store directly if needed, but `usePipeline` hook might have it?
-   * `usePipeline` returns state.
-   * Let's replicate the logic:
-   */
   const {
     runId,
     script,
@@ -41,18 +38,31 @@ export default function PipelineView() {
 
   const isReadOnly = getReadOnlyStatus(pipeline.activeStep);
 
+  const handleNewGeneration = () => {
+    pipeline.reset();
+  };
+
+  const handleCopyRunId = () => {
+    if (runId) {
+      navigator.clipboard.writeText(runId);
+    }
+  };
+
+  let content: React.ReactNode = null;
+
   switch (pipeline.activeStep) {
     case 0:
-      return (
+      content = (
         <ProductForm
           onSubmit={pipeline.startPipeline}
           isLoading={pipeline.isLoading}
           readOnly={isReadOnly}
         />
       );
+      break;
 
     case 1:
-      return pipeline.script ? (
+      content = pipeline.script ? (
         <ScriptEditor
           script={pipeline.script}
           onContinue={pipeline.generateAvatars}
@@ -61,9 +71,10 @@ export default function PipelineView() {
           readOnly={isReadOnly}
         />
       ) : null;
+      break;
 
     case 2:
-      return (
+      content = (
         <AvatarGallery
           variants={pipeline.avatarVariants}
           selectedIndex={pipeline.selectedAvatarIndex}
@@ -74,9 +85,10 @@ export default function PipelineView() {
           readOnly={isReadOnly}
         />
       );
+      break;
 
     case 3:
-      return (
+      content = (
         <StoryboardGrid
           results={pipeline.storyboardResults}
           onContinue={pipeline.generateVideos}
@@ -84,9 +96,10 @@ export default function PipelineView() {
           readOnly={isReadOnly}
         />
       );
+      break;
 
     case 4:
-      return (
+      content = (
         <VideoPlayer
           results={pipeline.videoResults}
           onContinue={pipeline.stitchFinalVideo}
@@ -95,9 +108,10 @@ export default function PipelineView() {
           readOnly={isReadOnly}
         />
       );
+      break;
 
     case 5:
-      return pipeline.finalVideoPath && pipeline.script ? (
+      content = pipeline.finalVideoPath && pipeline.script ? (
         <FinalPlayer
           videoPath={pipeline.finalVideoPath}
           scenesCount={pipeline.script.scenes.length}
@@ -106,13 +120,76 @@ export default function PipelineView() {
           isLoading={pipeline.isLoading}
         />
       ) : null;
+      break;
 
     case 6:
-      return pipeline.runId ? (
+      content = pipeline.runId ? (
         <ReviewActions runId={pipeline.runId} />
       ) : null;
+      break;
 
     default:
-      return null;
+      content = null;
   }
+
+  return (
+    <>
+      <PipelineInsight
+        currentStep={pipeline.activeStep}
+        stepName={STEP_NAMES[pipeline.activeStep] || 'Processing'}
+        isLoading={pipeline.isLoading}
+      />
+
+      {/* Run ID banner */}
+      {runId && (
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            mb: 2,
+            px: 2,
+            py: 1,
+            backgroundColor: '#F8F9FA',
+            borderRadius: 2,
+            border: '1px solid',
+            borderColor: 'divider',
+            animation: 'fadeInUp 0.3s ease',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Run:
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                fontFamily: '"Roboto Mono", monospace',
+                fontWeight: 600,
+                color: 'text.primary',
+              }}
+            >
+              {runId}
+            </Typography>
+            <Tooltip title="Copy Run ID">
+              <IconButton size="small" onClick={handleCopyRunId}>
+                <ContentCopy sx={{ fontSize: 14 }} />
+              </IconButton>
+            </Tooltip>
+          </Box>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<AddCircleOutline />}
+            onClick={handleNewGeneration}
+            sx={{ textTransform: 'none' }}
+          >
+            New Generation
+          </Button>
+        </Box>
+      )}
+
+      {content}
+    </>
+  );
 }

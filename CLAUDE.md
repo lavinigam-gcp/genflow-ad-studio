@@ -31,6 +31,17 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Veo 3.1 | FFmpeg
 - Video duration = `scene_count × 8` (Veo 8s clips) — not user-configurable
 - File uploads: use `api.upload()` with FormData — `api.post()` is for JSON only
 
+## Session Continuity
+
+- Interactive pipeline creates a job in SQLite at each step (`pipeline.py` endpoints persist via `job_store`)
+- `JobStore.create_job(request, job_id=run_id)` — use the run_id as job_id so file paths match
+- Guard pattern: `if job_store.get_job(run_id):` before updating — legacy runs may lack a DB record
+- Frontend `pipelineStore.loadJob(job)` hydrates all state from a Job object (script, avatars, storyboard, videos, final)
+- `activeStep` is computed from the furthest step with data (final_video > videos > storyboard > avatars > script)
+- History page Resume: calls `getJob(jobId)` → `store.loadJob(job)` → `navigate('/')`
+- Run ID banner + "New Generation" button shown in `PipelineView.tsx` when `runId` is set
+- `custom_instructions` field on `ScriptRequest` — appended to Gemini prompt as "ADDITIONAL CREATIVE DIRECTION"
+
 ## Layout
 
 - **AppBar**: Centered logo only (`frontend/src/components/layout/AppBar.tsx`)

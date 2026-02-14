@@ -8,6 +8,8 @@ class ScriptRequest(BaseModel):
     scene_count: int = Field(default=3, ge=2, le=6)
     ad_tone: str = Field(default="energetic")
     gemini_model: str | None = None
+    max_dialogue_words_per_scene: int = Field(default=25, ge=10, le=50)
+    custom_instructions: str = Field(default="")
 
 
 class AvatarProfile(BaseModel):

@@ -1,4 +1,4 @@
-.PHONY: install install-backend install-frontend setup setup-gcs dev dev-backend dev-frontend stop build clean check help test-api generate-samples
+.PHONY: install install-backend install-frontend setup setup-gcs dev dev-backend dev-frontend stop build clean check help test-api generate-samples deploy
 
 # ─── Config ──────────────────────────────────────
 PROJECT_ID ?= $(shell grep '^PROJECT_ID=' .env 2>/dev/null | cut -d= -f2)
@@ -132,6 +132,20 @@ test-api:
 	@echo ""
 	@echo "All smoke tests passed."
 	@echo "API docs: http://localhost:8000/docs"
+
+# ─── Deploy ─────────────────────────────────────
+deploy:
+	@echo "Building and deploying to Cloud Run..."
+	gcloud builds submit --tag gcr.io/$(PROJECT_ID)/genflow-ad-studio
+	gcloud run deploy genflow-ad-studio \
+		--image gcr.io/$(PROJECT_ID)/genflow-ad-studio \
+		--platform managed --region us-central1 \
+		--allow-unauthenticated \
+		--memory 2Gi --cpu 2 \
+		--max-instances 1 --min-instances 0 \
+		--timeout 600
+	@echo "Deployed!"
+	@gcloud run services describe genflow-ad-studio --region us-central1 --format 'value(status.url)'
 
 # ─── Clean ───────────────────────────────────────
 clean:

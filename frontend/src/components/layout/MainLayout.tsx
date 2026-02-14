@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Stepper,
@@ -6,6 +7,11 @@ import {
   CircularProgress,
   Button,
   Tooltip,
+  Typography,
+  IconButton,
+  Drawer,
+  Fab,
+  Badge,
 } from '@mui/material';
 import {
   CheckCircle,
@@ -13,10 +19,13 @@ import {
   DynamicFeed,
   RateReview,
   History,
+  Terminal,
+  Close,
+  HelpOutline,
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import AppBar from './AppBar';
-import LogConsole from '../common/LogConsole';
+import Footer from './Footer';
 import { usePipelineStore } from '../../store/pipelineStore';
 
 const NAV_ITEMS = [
@@ -24,6 +33,7 @@ const NAV_ITEMS = [
   { label: 'Bulk', path: '/bulk', icon: DynamicFeed },
   { label: 'Review', path: '/review', icon: RateReview },
   { label: 'History', path: '/history', icon: History },
+  { label: 'How it Works', path: '/how-it-works', icon: HelpOutline },
 ];
 
 const STEPS = [
@@ -99,6 +109,24 @@ export default function MainLayout() {
   const activeStep = usePipelineStore((s) => s.activeStep);
   const setStep = usePipelineStore((s) => s.setStep);
   const isLoading = usePipelineStore((s) => s.isLoading);
+
+  const [logPanelOpen, setLogPanelOpen] = useState(false);
+  const logs = usePipelineStore((s) => s.logs);
+  const logScrollRef = useRef<HTMLDivElement>(null);
+  const [prevLogCount, setPrevLogCount] = useState(0);
+  const [hasNewLogs, setHasNewLogs] = useState(false);
+
+  useEffect(() => {
+    if (logs.length > prevLogCount) {
+      setHasNewLogs(true);
+      const timer = setTimeout(() => setHasNewLogs(false), 2000);
+      setPrevLogCount(logs.length);
+      if (logScrollRef.current && logPanelOpen) {
+        logScrollRef.current.scrollTop = logScrollRef.current.scrollHeight;
+      }
+      return () => clearTimeout(timer);
+    }
+  }, [logs.length, prevLogCount, logPanelOpen]);
 
   // Get state to determine max reachable step
   const runId = usePipelineStore((s) => s.runId);
@@ -181,7 +209,8 @@ export default function MainLayout() {
         sx={{
           py: 2,
           px: 3,
-          backgroundColor: 'background.paper',
+          pl: { xs: 3, sm: 10 },
+          background: 'linear-gradient(180deg, #FFFFFF 0%, #F8F9FA 100%)',
           borderBottom: '1px solid',
           borderColor: 'divider',
         }}
@@ -260,12 +289,102 @@ export default function MainLayout() {
           width: '100%',
           mx: 'auto',
           p: 3,
+          pl: { xs: 3, sm: 10 },
         }}
       >
         <Outlet />
       </Box>
 
-      <LogConsole />
+      <Footer />
+
+      {/* Floating log FAB */}
+      <Fab
+        size="medium"
+        color={logs.length > 0 && logs[logs.length - 1]?.level === 'error' ? 'error' : 'primary'}
+        onClick={() => setLogPanelOpen(true)}
+        sx={{
+          position: 'fixed',
+          right: 16,
+          bottom: 24,
+          zIndex: 1200,
+          animation: hasNewLogs ? 'pulse 1s ease-in-out' : 'none',
+        }}
+      >
+        <Badge badgeContent={logs.length} color="error" max={99}>
+          <Terminal />
+        </Badge>
+      </Fab>
+
+      {/* Log Drawer */}
+      <Drawer
+        anchor="right"
+        open={logPanelOpen}
+        onClose={() => setLogPanelOpen(false)}
+        variant="persistent"
+        sx={{
+          '& .MuiDrawer-paper': {
+            width: 400,
+            borderLeft: '1px solid',
+            borderColor: 'divider',
+          },
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', backgroundColor: '#F1F3F4' }}>
+          <Terminal sx={{ fontSize: 18, color: 'text.secondary', mr: 1 }} />
+          <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 600 }}>
+            Pipeline Logs ({logs.length})
+          </Typography>
+          <IconButton size="small" onClick={() => setLogPanelOpen(false)}>
+            <Close fontSize="small" />
+          </IconButton>
+        </Box>
+        <Box
+          ref={logScrollRef}
+          sx={{
+            flex: 1,
+            overflow: 'auto',
+            px: 2,
+            py: 1,
+            backgroundColor: '#FAFBFC',
+            fontFamily: '"Roboto Mono", monospace',
+            fontSize: 13,
+            lineHeight: 1.8,
+          }}
+        >
+          {logs.length === 0 ? (
+            <Typography variant="caption" sx={{ color: '#9AA0A6', fontFamily: '"Roboto Mono", monospace' }}>
+              No logs yet
+            </Typography>
+          ) : (
+            logs.map((log, i) => (
+              <Box key={i} sx={{ display: 'flex', gap: 1 }}>
+                <Typography
+                  component="span"
+                  sx={{
+                    color: '#9AA0A6',
+                    fontFamily: '"Roboto Mono", monospace',
+                    fontSize: 13,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  [{new Date(log.timestamp).toLocaleTimeString('en-US', { hour12: false })}]
+                </Typography>
+                <Typography
+                  component="span"
+                  sx={{
+                    color: { info: '#1A73E8', success: '#1E8E3E', error: '#D93025', warn: '#E8710A', dim: '#9AA0A6' }[log.level] || '#1A73E8',
+                    fontFamily: '"Roboto Mono", monospace',
+                    fontSize: 13,
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  {log.message}
+                </Typography>
+              </Box>
+            ))
+          )}
+        </Box>
+      </Drawer>
     </Box>
   );
 }

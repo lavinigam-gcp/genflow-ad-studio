@@ -54,11 +54,14 @@ class GeminiService:
         target_duration: int = 30,
         ad_tone: str = "energetic",
         model_id: str | None = None,
+        max_words: int = 25,
+        custom_instructions: str = "",
     ) -> dict:
         """Generate video script using Gemini with structured JSON output.
 
         Args:
             model_id: Optional model override. Falls back to settings.gemini_model.
+            max_words: Maximum dialogue words per scene.
         """
         user_prompt = SCRIPT_USER_PROMPT_TEMPLATE.format(
             product_name=product_name,
@@ -67,8 +70,11 @@ class GeminiService:
             target_duration=target_duration,
             narrative_arc=build_narrative_arc(scene_count, target_duration),
             ad_tone=ad_tone,
-            max_words=self.settings.script_max_dialogue_words_per_scene,
+            max_words=max_words,
         )
+
+        if custom_instructions:
+            user_prompt += f"\n\nADDITIONAL CREATIVE DIRECTION FROM CLIENT:\n{custom_instructions}"
 
         image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/png")
         text_part = types.Part.from_text(text=user_prompt)

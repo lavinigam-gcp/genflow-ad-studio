@@ -50,9 +50,9 @@ export default function StoryboardGrid({ results, onContinue, isLoading, readOnl
       </Box>
 
       <Grid container spacing={3}>
-        {results.map((result) => (
+        {results.map((result, index) => (
           <Grid size={{ xs: 12, sm: 6, md: 4 }} key={result.scene_number}>
-            <Card>
+            <Card sx={{ animation: `fadeInUp 0.4s ease ${index * 0.1}s both` }}>
               <Box sx={{ position: 'relative' }}>
                 <CardMedia
                   component="img"
