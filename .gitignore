@@ -4,6 +4,8 @@
 
 # AI agent tooling (local-only config and state)
 .claude/
+.agents/
+.demo/
 .playwright-mcp/
 .docs/
 .gemini/

@@ -27,9 +27,7 @@ async def get_review(
     job_store: JobStore = Depends(get_job_store),
 ) -> dict:
     """Get review details and associated assets for a job."""
-    review = review_svc.get_review(job_id)
-    if review is None:
-        raise HTTPException(status_code=404, detail=f"No review found for job {job_id}")
+    review = review_svc.get_or_create_review(job_id)
 
     job = job_store.get_job(job_id)
     assets = {}
@@ -53,11 +51,8 @@ async def submit_decision(
     review_svc: ReviewService = Depends(get_review_service),
 ) -> dict:
     """Submit a review decision for a job."""
-    try:
-        review = review_svc.submit_decision(job_id, decision)
-        return {
-            "status": "success",
-            "review": review.model_dump(),
-        }
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+    review = review_svc.submit_decision(job_id, decision)
+    return {
+        "status": "success",
+        "review": review.model_dump(),
+    }

@@ -18,7 +18,7 @@ interface ReviewActionsProps {
 
 import { useNavigate } from 'react-router-dom';
 
-type ReviewAction = 'approved' | 'reject' | 'changes_requested';
+type ReviewAction = 'approved' | 'rejected' | 'changes_requested';
 
 export default function ReviewActions({ runId, onComplete }: ReviewActionsProps) {
   const navigate = useNavigate();
@@ -90,10 +90,10 @@ export default function ReviewActions({ runId, onComplete }: ReviewActionsProps)
             Approve
           </Button>
           <Button
-            variant={selectedAction === 'reject' ? 'contained' : 'outlined'}
+            variant={selectedAction === 'rejected' ? 'contained' : 'outlined'}
             color="error"
             startIcon={<Cancel />}
-            onClick={() => setSelectedAction('reject')}
+            onClick={() => setSelectedAction('rejected')}
             sx={{ flex: 1 }}
           >
             Reject
@@ -109,7 +109,7 @@ export default function ReviewActions({ runId, onComplete }: ReviewActionsProps)
           </Button>
         </Box>
 
-        {(selectedAction === 'reject' || selectedAction === 'changes_requested') && (
+        {(selectedAction === 'rejected' || selectedAction === 'changes_requested') && (
           <TextField
             label="Notes"
             value={notes}
@@ -118,7 +118,7 @@ export default function ReviewActions({ runId, onComplete }: ReviewActionsProps)
             multiline
             rows={3}
             placeholder={
-              selectedAction === 'reject'
+              selectedAction === 'rejected'
                 ? 'Reason for rejection...'
                 : 'What changes are needed...'
             }

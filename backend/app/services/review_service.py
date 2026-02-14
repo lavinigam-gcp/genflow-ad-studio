@@ -30,11 +30,16 @@ class ReviewService:
             if r.review_status == ReviewStatus.PENDING
         ]
 
-    def submit_decision(self, job_id: str, decision: ReviewDecision) -> ReviewResponse:
-        """Submit a review decision for a job."""
+    def get_or_create_review(self, job_id: str) -> ReviewResponse:
+        """Get existing review or create a new pending one."""
         review = self._reviews.get(job_id)
         if review is None:
-            raise ValueError(f"No review found for job {job_id}")
+            review = self.create_review(job_id)
+        return review
+
+    def submit_decision(self, job_id: str, decision: ReviewDecision) -> ReviewResponse:
+        """Submit a review decision for a job (auto-creates if needed)."""
+        review = self.get_or_create_review(job_id)
 
         review.review_status = decision.status
         review.reviewed_at = datetime.now()
