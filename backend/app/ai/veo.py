@@ -30,6 +30,9 @@ class VeoService:
         reference_image_uri: str,
         output_gcs_uri: str,
         num_variants: int = 4,
+        seed: int | None = None,
+        resolution: str = "720p",
+        negative_prompt_extra: str = "",
     ) -> list[str]:
         """Generate video variants using Veo 3.1.
 
@@ -42,15 +45,25 @@ class VeoService:
             mime_type="image/png",
         )
 
-        config = types.GenerateVideosConfig(
+        # Combine global negative prompt with per-scene extras
+        full_negative = VIDEO_NEGATIVE_PROMPT
+        if negative_prompt_extra:
+            full_negative = f"{VIDEO_NEGATIVE_PROMPT}, {negative_prompt_extra}"
+
+        config_kwargs: dict = dict(
             aspect_ratio="9:16",
             number_of_videos=num_variants,
             duration_seconds=8,
             generate_audio=True,
-            negative_prompt=VIDEO_NEGATIVE_PROMPT,
+            negative_prompt=full_negative,
             person_generation="allow_all",
             output_gcs_uri=output_gcs_uri,
         )
+
+        if seed is not None:
+            config_kwargs["seed"] = seed
+
+        config = types.GenerateVideosConfig(**config_kwargs)
 
         operation = await asyncio.to_thread(
             self.client.models.generate_videos,

@@ -62,15 +62,15 @@ export default function PipelineView() {
       break;
 
     case 1:
-      content = pipeline.script ? (
+      content = (
         <ScriptEditor
           script={pipeline.script}
-          onContinue={pipeline.generateAvatars}
+          onContinue={pipeline.navigateToAvatarStep}
           onUpdateScript={pipeline.updateScript}
           isLoading={pipeline.isLoading}
           readOnly={isReadOnly}
         />
-      ) : null;
+      );
       break;
 
     case 2:
@@ -79,7 +79,7 @@ export default function PipelineView() {
           variants={pipeline.avatarVariants}
           selectedIndex={pipeline.selectedAvatarIndex}
           onSelect={pipeline.selectAvatar}
-          onRegenerate={pipeline.generateAvatars}
+          onGenerate={pipeline.generateAvatars}
           onContinue={pipeline.confirmAvatarSelection}
           isLoading={pipeline.isLoading}
           readOnly={isReadOnly}

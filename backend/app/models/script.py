@@ -18,9 +18,13 @@ class AvatarProfile(BaseModel):
     attire: str
     tone_of_voice: str
     visual_description: str
+    voice_style: str = ""
+    ethnicity: str = ""
 
 
 class Scene(BaseModel):
+    model_config = {"extra": "ignore"}
+
     scene_number: int
     duration_seconds: int
     scene_type: str
@@ -32,8 +36,10 @@ class Scene(BaseModel):
     avatar_emotion: str
     product_visual_integration: str
     script_dialogue: str
-    transition_to_next: str
     sound_design: str
+    voice_style: str = Field(default="")
+    detailed_avatar_description: str = Field(default="")
+    negative_elements: str = Field(default="")
     transition_type: str = Field(default="cut")
     transition_duration: float = Field(default=0.5, ge=0.0, le=2.0)
     audio_continuity: str = Field(default="")
@@ -44,6 +50,8 @@ class VideoScript(BaseModel):
     total_duration: int = 30
     avatar_profile: AvatarProfile
     scenes: list[Scene]
+    negative_elements: str = ""
+    voice_style: str = ""
 
 
 class ScriptUpdateRequest(BaseModel):

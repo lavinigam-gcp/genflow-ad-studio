@@ -3,7 +3,12 @@ import re
 from pathlib import Path
 
 from app.storage.local import LocalStorage
-from app.utils.ffmpeg import check_ffmpeg, concat_videos, normalize_audio
+from app.utils.ffmpeg import (
+    check_ffmpeg,
+    concat_videos,
+    concat_videos_with_transitions,
+    normalize_audio,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +17,9 @@ class StitchService:
     def __init__(self, storage: LocalStorage):
         self.storage = storage
 
-    async def stitch_videos(self, run_id: str) -> str:
+    async def stitch_videos(
+        self, run_id: str, transitions: list[dict] | None = None
+    ) -> str:
         """Stitch all selected scene videos into a final commercial.
 
         1. Check ffmpeg availability
@@ -54,8 +61,11 @@ class StitchService:
         raw_output = str(final_dir / "commercial_raw.mp4")
         final_output = str(final_dir / "commercial.mp4")
 
-        # Concatenate videos
-        await concat_videos(video_paths, raw_output)
+        # Concatenate videos — use per-scene transitions if available
+        if transitions:
+            await concat_videos_with_transitions(video_paths, raw_output, transitions)
+        else:
+            await concat_videos(video_paths, raw_output)
 
         # Normalize audio
         await normalize_audio(raw_output, final_output)

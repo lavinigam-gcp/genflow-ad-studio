@@ -15,6 +15,8 @@ export interface AvatarProfile {
   attire: string;
   tone_of_voice: string;
   visual_description: string;
+  voice_style?: string;
+  ethnicity?: string;
 }
 
 export interface Scene {
@@ -29,8 +31,10 @@ export interface Scene {
   avatar_emotion: string;
   product_visual_integration: string;
   script_dialogue: string;
-  transition_to_next: string;
   sound_design: string;
+  voice_style?: string;
+  detailed_avatar_description?: string;
+  negative_elements?: string;
   transition_type?: string;
   transition_duration?: number;
   audio_continuity?: string;
@@ -41,6 +45,8 @@ export interface VideoScript {
   total_duration: number;
   avatar_profile: AvatarProfile;
   scenes: Scene[];
+  negative_elements?: string;
+  voice_style?: string;
 }
 
 export interface ScriptResponse {
@@ -59,6 +65,13 @@ export interface ScriptConfig {
   scene_count: { default: number; min: number; max: number };
   ad_tones: string[];
   transition_types: string[];
+}
+
+export interface AvatarGenerateOptions {
+  num_variants?: number;
+  image_model?: string;
+  custom_prompt?: string;
+  reference_image_url?: string;
 }
 
 export interface AvatarVariant {

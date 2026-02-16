@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 
 from app.dependencies import (
     get_avatar_service,
@@ -94,6 +95,10 @@ async def generate_avatars(
         response = await avatar_svc.generate_avatars(
             run_id=request.run_id,
             avatar_profile=request.avatar_profile,
+            num_variants=request.num_variants,
+            image_model=request.image_model,
+            custom_prompt=request.custom_prompt,
+            reference_image_url=request.reference_image_url,
         )
         if job_store.get_job(request.run_id):
             job_store.update_job(request.run_id, avatar_variants=response.variants)
@@ -170,6 +175,8 @@ async def generate_video(
             scenes_data=request.scenes_data,
             script_scenes=request.script_scenes,
             avatar_profile=request.avatar_profile,
+            seed=request.seed,
+            resolution=request.resolution,
         )
         if job_store.get_job(request.run_id):
             job_store.update_job(request.run_id, video_results=response.results)
@@ -201,15 +208,24 @@ async def select_video_variant(
         raise HTTPException(status_code=500, detail=str(exc))
 
 
+class StitchRequest(BaseModel):
+    run_id: str
+    transitions: list[dict] | None = None
+
+
 @router.post("/stitch")
 async def stitch_video(
-    run_id: str,
+    request: StitchRequest,
     stitch_svc: StitchService = Depends(get_stitch_service),
     job_store: JobStore = Depends(get_job_store),
 ) -> dict:
     """Stitch scene videos into final commercial."""
+    run_id = request.run_id
     try:
-        path = await stitch_svc.stitch_videos(run_id=run_id)
+        path = await stitch_svc.stitch_videos(
+            run_id=run_id,
+            transitions=request.transitions,
+        )
         if job_store.get_job(run_id):
             job_store.update_job(run_id, final_video_path=path, status=JobStatus.COMPLETED)
         return {"status": "success", "path": path}

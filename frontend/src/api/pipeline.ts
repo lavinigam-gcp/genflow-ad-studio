@@ -4,6 +4,7 @@ import type {
   ScriptResponse,
   AvatarProfile,
   AvatarResponse,
+  AvatarGenerateOptions,
   Scene,
   StoryboardResult,
   VideoResult,
@@ -38,10 +39,12 @@ export async function getScriptConfig(): Promise<ScriptConfig> {
 export async function generateAvatars(
   runId: string,
   avatarProfile: AvatarProfile,
+  options?: AvatarGenerateOptions,
 ): Promise<AvatarResponse> {
   return api.post<AvatarResponse>('/pipeline/avatar', {
     run_id: runId,
     avatar_profile: avatarProfile,
+    ...options,
   });
 }
 
@@ -70,6 +73,8 @@ export async function generateVideo(
   scenesData: StoryboardResult[],
   scriptScenes: Scene[],
   avatarProfile: AvatarProfile,
+  seed?: number | null,
+  resolution?: string,
 ): Promise<{ status: string; results: VideoResult[] }> {
   return api.post<{ status: string; results: VideoResult[] }>(
     '/pipeline/video',
@@ -78,6 +83,8 @@ export async function generateVideo(
       scenes_data: scenesData,
       script_scenes: scriptScenes,
       avatar_profile: avatarProfile,
+      ...(seed != null && { seed }),
+      ...(resolution && resolution !== '720p' && { resolution }),
     },
   );
 }
@@ -95,9 +102,14 @@ export async function selectVideoVariant(
 
 export async function stitchVideo(
   runId: string,
+  transitions?: Array<{ transition_type: string; transition_duration: number }>,
 ): Promise<{ status: string; path: string }> {
   return api.post<{ status: string; path: string }>(
-    `/pipeline/stitch?run_id=${encodeURIComponent(runId)}`,
+    '/pipeline/stitch',
+    {
+      run_id: runId,
+      ...(transitions && { transitions }),
+    },
   );
 }
 

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.script import AvatarProfile
 
@@ -6,6 +6,10 @@ from app.models.script import AvatarProfile
 class AvatarRequest(BaseModel):
     run_id: str
     avatar_profile: AvatarProfile
+    num_variants: int = Field(default=4, ge=1, le=8)
+    image_model: str | None = None
+    custom_prompt: str = ""
+    reference_image_url: str = ""
 
 
 class AvatarVariant(BaseModel):

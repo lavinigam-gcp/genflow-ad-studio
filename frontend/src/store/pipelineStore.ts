@@ -20,6 +20,8 @@ interface PipelineState {
   logs: LogEntry[];
   isLoading: boolean;
   error: string | null;
+  veoSeed: number | null;
+  veoResolution: string;
 
   setStep: (step: number) => void;
   setRunId: (runId: string) => void;
@@ -33,6 +35,8 @@ interface PipelineState {
   addLog: (message: string, level: LogEntry['level']) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  setVeoSeed: (seed: number | null) => void;
+  setVeoResolution: (resolution: string) => void;
   loadJob: (job: Job) => void;
   reset: () => void;
 }
@@ -49,6 +53,8 @@ const initialState = {
   logs: [],
   isLoading: false,
   error: null,
+  veoSeed: null as number | null,
+  veoResolution: '720p',
 };
 
 export const usePipelineStore = create<PipelineState>((set) => ({
@@ -94,6 +100,10 @@ export const usePipelineStore = create<PipelineState>((set) => ({
   setLoading: (loading) => set({ isLoading: loading }),
 
   setError: (error) => set({ error }),
+
+  setVeoSeed: (seed) => set({ veoSeed: seed }),
+
+  setVeoResolution: (resolution) => set({ veoResolution: resolution }),
 
   loadJob: (job) => {
     // Compute the furthest step with data

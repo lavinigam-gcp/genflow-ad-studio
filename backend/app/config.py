@@ -36,6 +36,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("veo_model", "VEO_MODEL", "VEO_MODEL_ID"),
     )
     veo_fast_model: str = "veo-3.1-fast-generate-preview"
+    imagen_model: str = "imagen-4.0-generate-001"
 
     output_dir: str = "output"
     storyboard_qc_threshold: int = 60

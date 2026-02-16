@@ -1,7 +1,7 @@
 # Genflow Ad Studio
 
 AI-powered 30-second video commercial generator. Product image in, finished ad out.
-Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Veo 3.1 | FFmpeg
+Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Imagen 4 + Veo 3.1 | FFmpeg
 
 ## Commands
 
@@ -30,6 +30,11 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Veo 3.1 | FFmpeg
 - `image_url` accepts local `/output/...` paths — services detect prefix and read from disk
 - Video duration = `scene_count × 8` (Veo 8s clips) — not user-configurable
 - File uploads: use `api.upload()` with FormData — `api.post()` is for JSON only
+- `detailed_avatar_description` must be identical across all scenes for Veo consistency
+- Same Veo `seed` across all scenes for character/voice consistency
+- Imagen 4 does NOT support `negative_prompt` — use positive prompting only
+- Dialogue: colon notation without quotes (prevents Veo text rendering)
+- Transition types in script map to FFmpeg xfade effects via `TRANSITION_MAP` in `ffmpeg.py`
 
 ## Session Continuity
 
@@ -57,7 +62,7 @@ backend/
   main.py                     # FastAPI app + route registration
   app/
     dependencies.py           # DI container (@lru_cache singletons)
-    ai/    {gemini, gemini_image, veo, retry, prompts}.py
+    ai/    {gemini, gemini_image, imagen, veo, retry, prompts}.py
     models/ {job, script, avatar, storyboard, video, review, sse, common}.py
     services/ {pipeline, script, avatar, storyboard, video, stitch, qc, review, bulk, input}_service.py
     api/    {pipeline, jobs, bulk, review, assets, health, config_api, input}.py

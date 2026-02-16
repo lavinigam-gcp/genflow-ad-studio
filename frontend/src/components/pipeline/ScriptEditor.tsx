@@ -7,8 +7,8 @@ import {
   Box,
   ToggleButtonGroup,
   ToggleButton,
-  TextField,
   Chip,
+  Skeleton,
 } from '@mui/material';
 import {
   Visibility,
@@ -22,7 +22,7 @@ import SceneCard from './SceneCard';
 import TransitionIndicator from './TransitionIndicator';
 
 interface ScriptEditorProps {
-  script: VideoScript;
+  script: VideoScript | null;
   onContinue: () => void;
   onUpdateScript?: (script: VideoScript) => Promise<void>;
   isLoading: boolean;
@@ -37,36 +37,31 @@ export default function ScriptEditor({
   readOnly = false,
 }: ScriptEditorProps) {
   const [mode, setMode] = useState<'view' | 'edit' | 'json'>('view');
-  const [editJson, setEditJson] = useState(() => JSON.stringify(script, null, 2));
-  const [editedScenes, setEditedScenes] = useState<Scene[]>(() => [...script.scenes]);
+  const [editJson, setEditJson] = useState(() => script ? JSON.stringify(script, null, 2) : '');
+  const [editedScenes, setEditedScenes] = useState<Scene[]>(() => script ? [...script.scenes] : []);
   const [hasChanges, setHasChanges] = useState(false);
 
-  const handleModeChange = (
-    _: React.MouseEvent<HTMLElement>,
-    newMode: 'view' | 'edit' | 'json' | null,
-  ) => {
-    if (newMode) {
+  const handleModeChange = useCallback(
+    (_: React.MouseEvent<HTMLElement>, newMode: 'view' | 'edit' | 'json' | null) => {
+      if (!newMode || !script) return;
       setMode(newMode);
       if (newMode === 'json') {
-        // Sync JSON view with current state (edited scenes or original)
         const currentScript = hasChanges
           ? { ...script, scenes: editedScenes }
           : script;
         setEditJson(JSON.stringify(currentScript, null, 2));
       }
-      if (newMode === 'view' || newMode === 'edit') {
-        // Sync scenes from JSON if JSON was edited
-        if (mode === 'json') {
-          try {
-            const parsed = JSON.parse(editJson) as VideoScript;
-            setEditedScenes(parsed.scenes);
-          } catch {
-            // Invalid JSON, keep current edited scenes
-          }
+      if ((newMode === 'view' || newMode === 'edit') && mode === 'json') {
+        try {
+          const parsed = JSON.parse(editJson) as VideoScript;
+          setEditedScenes(parsed.scenes);
+        } catch {
+          // Invalid JSON, keep current
         }
       }
-    }
-  };
+    },
+    [script, hasChanges, editedScenes, mode, editJson],
+  );
 
   const handleSceneChange = useCallback(
     (index: number, updated: Scene) => {
@@ -99,8 +94,8 @@ export default function ScriptEditor({
     [],
   );
 
-  const handleSave = async () => {
-    if (!onUpdateScript) return;
+  const handleSave = useCallback(async () => {
+    if (!onUpdateScript || !script) return;
 
     let scriptToSave: VideoScript;
 
@@ -108,7 +103,7 @@ export default function ScriptEditor({
       try {
         scriptToSave = JSON.parse(editJson) as VideoScript;
       } catch {
-        return; // Invalid JSON
+        return;
       }
     } else {
       scriptToSave = { ...script, scenes: editedScenes };
@@ -116,7 +111,33 @@ export default function ScriptEditor({
 
     await onUpdateScript(scriptToSave);
     setHasChanges(false);
-  };
+  }, [onUpdateScript, script, mode, editJson, editedScenes]);
+
+  // Loading skeleton when script hasn't arrived yet
+  if (!script) {
+    return (
+      <Card sx={{ maxWidth: 900, mx: 'auto' }}>
+        <CardContent sx={{ p: 4 }}>
+          <Typography variant="h5" sx={{ fontWeight: 600, mb: 3 }}>
+            Generating Script...
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+            <Skeleton variant="rounded" width={200} height={32} />
+            <Skeleton variant="rounded" width={60} height={32} />
+            <Skeleton variant="rounded" width={80} height={32} />
+          </Box>
+          {[1, 2, 3].map((i) => (
+            <Skeleton
+              key={i}
+              variant="rounded"
+              height={160}
+              sx={{ mb: 2, borderRadius: 2 }}
+            />
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
 
   const isEditing = mode === 'edit';
   const displayScenes = isEditing ? editedScenes : script.scenes;
@@ -156,34 +177,44 @@ export default function ScriptEditor({
           </ToggleButtonGroup>
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+        <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
           <Chip label={script.video_title} color="primary" variant="outlined" />
           <Chip label={`${script.total_duration}s`} variant="outlined" />
           <Chip label={`${script.scenes.length} scenes`} variant="outlined" />
+          {script.voice_style && (
+            <Chip label={`Voice: ${script.voice_style}`} variant="outlined" size="small" />
+          )}
+          {script.negative_elements && (
+            <Chip label={`Neg: ${script.negative_elements}`} variant="outlined" size="small" sx={{ maxWidth: 300 }} />
+          )}
         </Box>
 
         {mode === 'json' ? (
-          /* JSON mode — raw JSON editor for power users */
-          <TextField
-            fullWidth
-            multiline
+          /* JSON mode — plain textarea (avoids MUI auto-scroll-to-cursor) */
+          <Box
+            component="textarea"
             value={editJson}
-            onChange={(e) => {
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
               setEditJson(e.target.value);
               setHasChanges(true);
             }}
-            slotProps={{
-              input: {
-                sx: {
-                  fontFamily: '"Roboto Mono", monospace',
-                  fontSize: 13,
-                  lineHeight: 1.6,
-                },
-              },
-            }}
             sx={{
-              '& .MuiOutlinedInput-root': { maxHeight: 500, overflow: 'auto' },
+              width: '100%',
+              maxHeight: '70vh',
+              fontFamily: '"Roboto Mono", monospace',
+              fontSize: 13,
+              lineHeight: 1.6,
+              p: 2,
+              border: '1px solid',
+              borderColor: '#DADCE0',
+              borderRadius: 1,
+              resize: 'vertical',
+              overflow: 'auto',
+              boxSizing: 'border-box',
+              outline: 'none',
+              '&:focus': { borderColor: '#1A73E8', borderWidth: 2 },
             }}
+            rows={25}
           />
         ) : (
           /* View and Edit modes — visual scene cards */

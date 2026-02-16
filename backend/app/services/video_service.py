@@ -38,6 +38,8 @@ class VideoService:
         avatar_profile: AvatarProfile,
         on_progress: Callable | None = None,
         num_variants: int | None = None,
+        seed: int | None = None,
+        resolution: str = "720p",
     ) -> VideoResponse:
         """Generate video variants for all scenes with QC and auto-selection.
 
@@ -55,6 +57,8 @@ class VideoService:
                 return await self._process_single_scene(
                     run_id, sb_result, scene, avatar_profile, on_progress,
                     num_variants=effective_variants,
+                    seed=seed,
+                    resolution=resolution,
                 )
 
         tasks = [process_scene(sb) for sb in scenes_data]
@@ -71,6 +75,8 @@ class VideoService:
         avatar_profile: AvatarProfile,
         on_progress: Callable | None,
         num_variants: int | None = None,
+        seed: int | None = None,
+        resolution: str = "720p",
     ) -> VideoResult:
         """Process a single scene: upload to GCS, generate videos, QC, select best."""
         effective_variants = num_variants or self.settings.max_video_variants
@@ -93,13 +99,26 @@ class VideoService:
             self.gcs.upload_file, product_local, gcs_product_path,
         )
 
-        # 2. Build video prompt (motion-only for Veo 3.1 image-to-video)
+        # 2. Build video prompt with full character description for consistency
+        voice_style = (
+            scene.voice_style
+            or avatar_profile.voice_style
+            or avatar_profile.tone_of_voice
+        )
+        detailed_desc = (
+            scene.detailed_avatar_description
+            or avatar_profile.visual_description
+        )
         prompt = VIDEO_PROMPT_TEMPLATE.format(
+            detailed_avatar_description=detailed_desc,
+            visual_background=scene.visual_background,
+            lighting=scene.lighting,
+            shot_type=scene.shot_type,
             avatar_action=scene.avatar_action,
             avatar_emotion=scene.avatar_emotion,
             camera_movement=scene.camera_movement,
             product_visual_integration=scene.product_visual_integration,
-            tone_of_voice=avatar_profile.tone_of_voice,
+            voice_style=voice_style,
             script_dialogue=scene.script_dialogue,
             sound_design=scene.sound_design,
         )
@@ -111,6 +130,9 @@ class VideoService:
             reference_image_uri=storyboard_gcs_uri,
             output_gcs_uri=output_gcs_uri,
             num_variants=effective_variants,
+            seed=seed,
+            resolution=resolution,
+            negative_prompt_extra=scene.negative_elements,
         )
 
         # 4. Download all variants from GCS to local

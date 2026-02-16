@@ -190,6 +190,152 @@ async def _concat_with_demuxer(
         raise RuntimeError(f"ffmpeg concat demuxer failed: {stderr.decode()[-500:]}")
 
 
+# Mapping from script transition types to FFmpeg xfade transition names
+TRANSITION_MAP: dict[str, str] = {
+    "cut": "",           # No xfade — hard splice
+    "dissolve": "fade",
+    "fade": "fade",
+    "wipe": "wipeleft",
+    "zoom": "zoomin",
+    "match_cut": "fade",
+    "whip_pan": "slideleft",
+}
+
+
+async def concat_videos_with_transitions(
+    video_paths: list[str],
+    output_path: str,
+    transitions: list[dict],
+) -> str:
+    """Concatenate videos using per-scene transition types and durations.
+
+    Each entry in *transitions* has:
+      - transition_type: str (mapped via TRANSITION_MAP)
+      - transition_duration: float (seconds)
+
+    transitions[i] is the transition BETWEEN video_paths[i] and video_paths[i+1],
+    so len(transitions) should be len(video_paths) - 1.
+
+    Falls back to concat_videos() if anything goes wrong with xfade.
+    """
+    if not video_paths:
+        raise ValueError("No video paths provided")
+
+    if len(video_paths) == 1:
+        shutil.copy2(video_paths[0], output_path)
+        return output_path
+
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+
+    # Ensure we have the right number of transitions
+    expected = len(video_paths) - 1
+    if len(transitions) < expected:
+        # Pad with default fade transitions
+        for _ in range(expected - len(transitions)):
+            transitions.append({"transition_type": "fade", "transition_duration": 0.5})
+
+    # Pre-process all videos to CFR
+    with tempfile.TemporaryDirectory() as tmpdir:
+        cfr_paths: list[str] = []
+        preprocess_tasks = []
+        for i, path in enumerate(video_paths):
+            cfr_path = str(Path(tmpdir) / f"cfr_{i}.mp4")
+            cfr_paths.append(cfr_path)
+            preprocess_tasks.append(_preprocess_video(path, cfr_path))
+        await asyncio.gather(*preprocess_tasks)
+
+        # Check if any transitions are "cut" (no effect) — those get 0 duration
+        # If all are cuts, use simple demuxer
+        all_cuts = all(
+            TRANSITION_MAP.get(t.get("transition_type", "cut"), "") == ""
+            for t in transitions[:expected]
+        )
+
+        if all_cuts or len(video_paths) > 5:
+            # Use concat demuxer — simpler and more stable
+            await _concat_with_demuxer(cfr_paths, output_path, tmpdir)
+        else:
+            try:
+                await _concat_with_per_scene_xfade(
+                    cfr_paths, output_path, transitions[:expected]
+                )
+            except RuntimeError:
+                logger.warning("Per-scene xfade failed, falling back to demuxer")
+                await _concat_with_demuxer(cfr_paths, output_path, tmpdir)
+
+    return output_path
+
+
+async def _concat_with_per_scene_xfade(
+    video_paths: list[str],
+    output_path: str,
+    transitions: list[dict],
+) -> None:
+    """Concatenate videos using xfade with per-boundary transition config."""
+    n = len(video_paths)
+    filter_parts: list[str] = []
+    inputs: list[str] = []
+
+    for i, path in enumerate(video_paths):
+        inputs.extend(["-i", path])
+        filter_parts.append(f"[{i}:v]setpts=PTS-STARTPTS[v{i}];")
+        filter_parts.append(f"[{i}:a]aresample=async=1[a{i}];")
+
+    current_v = "v0"
+    current_a = "a0"
+    for i in range(1, n):
+        out_v = f"outv{i}"
+        out_a = f"outa{i}"
+        trans = transitions[i - 1]
+        trans_type = trans.get("transition_type", "fade")
+        trans_duration = float(trans.get("transition_duration", 0.5))
+        xfade_name = TRANSITION_MAP.get(trans_type, "fade") or "fade"
+
+        # For "cut" transitions, use minimal duration
+        if trans_type == "cut":
+            trans_duration = 0.01
+
+        offset = sum(
+            _get_duration(video_paths[j]) - float(transitions[j].get("transition_duration", 0.5))
+            if j < len(transitions) and transitions[j].get("transition_type") != "cut"
+            else _get_duration(video_paths[j])
+            for j in range(i)
+        )
+
+        filter_parts.append(
+            f"[{current_v}][v{i}]xfade=transition={xfade_name}:"
+            f"duration={trans_duration}:offset={offset:.2f}[{out_v}];"
+        )
+        filter_parts.append(
+            f"[{current_a}][a{i}]acrossfade=d={trans_duration}[{out_a}];"
+        )
+        current_v = out_v
+        current_a = out_a
+
+    filter_complex = "".join(filter_parts).rstrip(";")
+
+    cmd = [
+        "ffmpeg", "-y",
+        *inputs,
+        "-filter_complex", filter_complex,
+        "-map", f"[{current_v}]",
+        "-map", f"[{current_a}]",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "18",
+        "-c:a", "aac", "-b:a", "192k",
+        "-movflags", "+faststart",
+        output_path,
+    ]
+
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    _, stderr = await proc.communicate()
+    if proc.returncode != 0:
+        raise RuntimeError(f"ffmpeg per-scene xfade failed: {stderr.decode()[-500:]}")
+
+
 async def normalize_audio(input_path: str, output_path: str) -> str:
     """Normalize audio levels using ffmpeg loudnorm filter."""
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)

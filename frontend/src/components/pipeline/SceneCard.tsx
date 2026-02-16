@@ -201,6 +201,26 @@ export default function SceneCard({ scene, isEditing, onChange }: SceneCardProps
               isEditing={false}
               onChange={handleChange}
             />
+
+            {scene.voice_style && (
+              <LabeledField
+                label="Voice Style"
+                value={scene.voice_style}
+                field="voice_style"
+                isEditing={isEditing}
+                onChange={handleChange}
+              />
+            )}
+
+            {scene.negative_elements && (
+              <LabeledField
+                label="Negative Elements"
+                value={scene.negative_elements}
+                field="negative_elements"
+                isEditing={isEditing}
+                onChange={handleChange}
+              />
+            )}
           </Box>
         </Collapse>
       </CardContent>

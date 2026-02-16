@@ -1,13 +1,15 @@
 import { useCallback } from 'react';
 import { usePipelineStore } from '../store/pipelineStore';
 import * as pipelineApi from '../api/pipeline';
-import type { ScriptRequest, VideoScript } from '../types';
+import type { ScriptRequest, VideoScript, AvatarGenerateOptions } from '../types';
 
 export function usePipeline() {
   const store = usePipelineStore();
 
   const startPipeline = useCallback(
     async (request: ScriptRequest) => {
+      // Navigate to script step immediately so user sees loading state there
+      store.setStep(1);
       store.setLoading(true);
       store.setError(null);
       store.addLog(`Starting script generation (model: ${request.gemini_model || 'gemini-3-flash-preview'})...`, 'info');
@@ -17,13 +19,14 @@ export function usePipeline() {
         const response = await pipelineApi.generateScript(request);
         store.setRunId(response.run_id);
         store.setScript(response.script);
-        store.setStep(1);
         const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
         store.addLog(`Script generated in ${elapsed}s`, 'success');
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to generate script';
         store.setError(message);
         store.addLog(message, 'error');
+        // Navigate back to input step on error so user can retry
+        store.setStep(0);
       } finally {
         store.setLoading(false);
       }
@@ -31,7 +34,11 @@ export function usePipeline() {
     [store]
   );
 
-  const generateAvatars = useCallback(async () => {
+  const navigateToAvatarStep = useCallback(() => {
+    store.setStep(2);
+  }, [store]);
+
+  const generateAvatars = useCallback(async (options?: AvatarGenerateOptions) => {
     const { runId, script } = usePipelineStore.getState();
     if (!runId || !script) return;
     store.setLoading(true);
@@ -42,9 +49,9 @@ export function usePipeline() {
       const response = await pipelineApi.generateAvatars(
         runId,
         script.avatar_profile,
+        options,
       );
       store.setAvatars(response.variants);
-      store.setStep(2);
       store.addLog(`Generated ${response.variants.length} avatar variants`, 'success');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to generate avatars';
@@ -89,7 +96,7 @@ export function usePipeline() {
   }, [store]);
 
   const generateVideos = useCallback(async () => {
-    const { runId, storyboardResults, script } = usePipelineStore.getState();
+    const { runId, storyboardResults, script, veoSeed, veoResolution } = usePipelineStore.getState();
     if (!runId || !script || storyboardResults.length === 0) return;
     store.setLoading(true);
     store.setError(null);
@@ -102,6 +109,8 @@ export function usePipeline() {
         storyboardResults,
         script.scenes,
         script.avatar_profile,
+        veoSeed,
+        veoResolution,
       );
       store.setVideos(response.results);
       store.setStep(4);
@@ -123,9 +132,17 @@ export function usePipeline() {
     store.setError(null);
     store.addLog(`Stitching ${currentScript?.scenes.length || '?'} scenes into final video with FFmpeg...`, 'info');
 
+    // Extract per-scene transitions from script (all scenes except the last)
+    const transitions = currentScript?.scenes
+      .slice(0, -1)
+      .map((s) => ({
+        transition_type: s.transition_type ?? 'cut',
+        transition_duration: s.transition_duration ?? 0.5,
+      }));
+
     try {
       const t0 = Date.now();
-      const response = await pipelineApi.stitchVideo(runId);
+      const response = await pipelineApi.stitchVideo(runId, transitions);
       store.setFinalVideo(response.path);
       store.setStep(5);
       const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
@@ -214,6 +231,7 @@ export function usePipeline() {
     ...store,
     startPipeline,
     updateScript,
+    navigateToAvatarStep,
     generateAvatars,
     confirmAvatarSelection,
     generateVideos,

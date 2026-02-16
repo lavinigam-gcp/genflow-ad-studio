@@ -5,6 +5,7 @@ from google.cloud import storage
 
 from app.ai.gemini import GeminiService
 from app.ai.gemini_image import GeminiImageService
+from app.ai.imagen import ImagenService
 from app.ai.veo import VeoService
 from app.config import Settings
 from app.config import get_settings as _get_settings
@@ -121,6 +122,11 @@ def get_gemini_image_service() -> GeminiImageService:
 
 
 @lru_cache
+def get_imagen_service() -> ImagenService:
+    return ImagenService(client=get_genai_client(), settings=get_settings())
+
+
+@lru_cache
 def get_veo_service() -> VeoService:
     return VeoService(client=get_genai_client(), settings=get_settings())
 
@@ -157,6 +163,7 @@ def get_script_service() -> ScriptService:
 def get_avatar_service() -> AvatarService:
     return AvatarService(
         gemini_image=get_gemini_image_service(),
+        imagen=get_imagen_service(),
         storage=get_local_storage(),
         settings=get_settings(),
     )

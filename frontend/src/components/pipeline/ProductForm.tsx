@@ -35,8 +35,10 @@ import {
   Link as LinkIcon,
   Image as ImageIcon,
   AutoFixHigh,
+  Casino,
 } from '@mui/icons-material';
 import type { ScriptRequest, SampleProduct, GeminiModelOption } from '../../types';
+import { usePipelineStore } from '../../store/pipelineStore';
 import {
   listSamples,
   uploadImage,
@@ -624,6 +626,51 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false }: P
                 placeholder="e.g. Focus on sustainability features, use humor, target Gen-Z audience..."
                 helperText="Additional creative direction for the AI script writer"
               />
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>
+                Veo Video Settings
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
+                <TextField
+                  label="Veo Seed"
+                  type="number"
+                  size="small"
+                  value={usePipelineStore.getState().veoSeed ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value ? parseInt(e.target.value, 10) : null;
+                    usePipelineStore.getState().setVeoSeed(val);
+                  }}
+                  disabled={isLoading || readOnly}
+                  placeholder="Auto"
+                  helperText="Same seed = consistent character across scenes"
+                  sx={{ maxWidth: 200 }}
+                />
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    const seed = Math.floor(Math.random() * 2147483647);
+                    usePipelineStore.getState().setVeoSeed(seed);
+                  }}
+                  disabled={isLoading || readOnly}
+                  title="Generate random seed"
+                  sx={{ mb: 3 }}
+                >
+                  <Casino />
+                </IconButton>
+                <FormControl size="small" sx={{ minWidth: 140 }}>
+                  <InputLabel>Resolution</InputLabel>
+                  <Select
+                    value={usePipelineStore.getState().veoResolution}
+                    label="Resolution"
+                    onChange={(e: SelectChangeEvent) =>
+                      usePipelineStore.getState().setVeoResolution(e.target.value)
+                    }
+                    disabled={isLoading || readOnly}
+                  >
+                    <MenuItem value="720p">720p</MenuItem>
+                    <MenuItem value="1080p">1080p</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
             </Box>
           </Collapse>
         </Box>

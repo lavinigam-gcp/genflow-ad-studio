@@ -9,6 +9,8 @@ class VideoRequest(BaseModel):
     scenes_data: list[StoryboardResult]
     script_scenes: list[Scene]
     avatar_profile: AvatarProfile
+    seed: int | None = None
+    resolution: str = "720p"
 
 
 class VideoQCDimension(BaseModel):

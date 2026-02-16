@@ -227,7 +227,7 @@ export default function MainLayout() {
             // - Loading: Only show spinner on the maxStep if loading
             // - Completed: Steps before the maxStep are completed
             // - Viewing: The user is currently looking at this step (index === activeStep)
-            const isProcessing = index === maxStep && isLoading;
+            const isProcessing = index === activeStep && isLoading;
             const isCompleted = index < maxStep;
             const isViewing = index === activeStep;
 
