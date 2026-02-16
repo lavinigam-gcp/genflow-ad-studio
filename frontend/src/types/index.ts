@@ -161,6 +161,7 @@ export interface VideoResult {
   selected_video_path: string;
   regen_attempts?: number;
   prompt_used?: string;
+  qc_rewrite_context?: string;
 }
 
 export interface VideoGenerateOptions {
@@ -196,6 +197,7 @@ export interface VideoRegenRequest {
   use_reference_images?: boolean;
   negative_prompt_extra?: string;
   generate_audio?: boolean;
+  previous_qc_report?: VideoQCReport;
 }
 
 export interface VideoSelectRequest {

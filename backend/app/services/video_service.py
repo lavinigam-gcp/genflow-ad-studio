@@ -8,7 +8,7 @@ from app.ai.veo import VeoService
 from app.config import Settings
 from app.models.script import AvatarProfile, Scene
 from app.models.storyboard import StoryboardResult
-from app.models.video import VideoResponse, VideoResult, VideoVariant
+from app.models.video import VideoQCReport, VideoResponse, VideoResult, VideoVariant
 from app.services.qc_service import QCService
 from app.storage.gcs import GCSStorage
 from app.storage.local import LocalStorage
@@ -164,6 +164,7 @@ class VideoService:
         negative_prompt_extra: str = "",
         prev_scene_last_frame_gcs: str | None = None,
         generate_audio: bool = True,
+        previous_qc_report: "VideoQCReport | None" = None,
     ) -> VideoResult:
         """Process a single scene: upload to GCS, generate videos, QC, select best."""
         effective_variants = num_variants or self.settings.max_video_variants
@@ -227,6 +228,14 @@ class VideoService:
             sound_design=scene.sound_design,
             audio_continuity=scene.audio_continuity or "",
         )
+
+        # 2b. Pre-rewrite prompt using previous QC feedback (manual regen)
+        qc_rewrite_context: str | None = None
+        if previous_qc_report:
+            feedback = self.qc.build_video_qc_feedback(previous_qc_report)
+            qc_rewrite_context = f"Pre-generation rewrite from previous QC:\n{feedback}"
+            prompt = await self.qc.rewrite_video_prompt(prompt, previous_qc_report)
+            logger.info("Scene %d: prompt pre-rewritten using previous QC feedback", scene_num)
 
         # Build per-scene negative prompt from scene + request level
         scene_negative = scene.negative_elements or ""
@@ -304,6 +313,9 @@ class VideoService:
                 )
                 # Rewrite prompt based on QC feedback
                 if selected_variant.qc_report:
+                    feedback = self.qc.build_video_qc_feedback(selected_variant.qc_report)
+                    regen_ctx = f"QC regen attempt {regen_attempts}:\n{feedback}"
+                    qc_rewrite_context = f"{qc_rewrite_context}\n\n{regen_ctx}" if qc_rewrite_context else regen_ctx
                     prompt = await self.qc.rewrite_video_prompt(prompt, selected_variant.qc_report)
 
                 # Regenerate all variants with improved prompt
@@ -386,6 +398,7 @@ class VideoService:
             selected_video_path=self.storage.to_url_path(selected_path),
             regen_attempts=regen_attempts,
             prompt_used=prompt,
+            qc_rewrite_context=qc_rewrite_context,
         )
 
         if on_progress:
@@ -416,6 +429,7 @@ class VideoService:
         use_reference_images: bool = True,
         negative_prompt_extra: str = "",
         generate_audio: bool = True,
+        previous_qc_report: VideoQCReport | None = None,
     ) -> VideoResult:
         """Regenerate video for a single scene."""
         return await self._process_single_scene(
@@ -436,6 +450,7 @@ class VideoService:
             use_reference_images=use_reference_images,
             negative_prompt_extra=negative_prompt_extra,
             generate_audio=generate_audio,
+            previous_qc_report=previous_qc_report,
         )
 
     async def select_variant(

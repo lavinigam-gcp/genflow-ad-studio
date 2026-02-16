@@ -101,8 +101,9 @@ class QCService:
         qc_feedback = "\n".join(feedback_parts)
         return await self.gemini.rewrite_prompt(original_prompt, qc_feedback)
 
-    async def rewrite_video_prompt(self, original_prompt: str, qc_report: VideoQCReport) -> str:
-        """Use Gemini to rewrite a video prompt based on QC feedback."""
+    @staticmethod
+    def build_video_qc_feedback(qc_report: VideoQCReport) -> str:
+        """Build a human-readable QC feedback string from a video QC report."""
         feedback_parts: list[str] = [
             f"Technical distortion score: {qc_report.technical_distortion.score}/10 - "
             f"{qc_report.technical_distortion.reasoning}",
@@ -119,7 +120,11 @@ class QCService:
             f"Brand/text accuracy score: {qc_report.brand_text_accuracy.score}/10 - "
             f"{qc_report.brand_text_accuracy.reasoning}",
         ]
-        qc_feedback = "\n".join(feedback_parts)
+        return "\n".join(feedback_parts)
+
+    async def rewrite_video_prompt(self, original_prompt: str, qc_report: VideoQCReport) -> str:
+        """Use Gemini to rewrite a video prompt based on QC feedback."""
+        qc_feedback = self.build_video_qc_feedback(qc_report)
         return await self.gemini.rewrite_prompt(original_prompt, qc_feedback)
 
     def select_best_video_variant(self, variants: list[VideoVariant]) -> int:

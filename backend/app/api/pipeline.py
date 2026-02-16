@@ -307,6 +307,7 @@ async def regen_video_scene(
             use_reference_images=request.use_reference_images,
             negative_prompt_extra=request.negative_prompt_extra,
             generate_audio=request.generate_audio,
+            previous_qc_report=request.previous_qc_report,
         )
         # Update the specific scene in the job's video results
         job = job_store.get_job(request.run_id)

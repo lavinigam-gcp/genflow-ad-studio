@@ -125,6 +125,7 @@ export default function VideoPlayer({
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 2 ** 31).toString());
   const [generateAudio, setGenerateAudio] = useState(true);
   const [expandedPrompts, setExpandedPrompts] = useState<Record<number, boolean>>({});
+  const [expandedQcContext, setExpandedQcContext] = useState<Record<number, boolean>>({});
 
   const requires8s = useReferenceImages || resolution === '1080p' || resolution === '4K';
   const show4KWarning = resolution === '4K';
@@ -419,8 +420,29 @@ export default function VideoPlayer({
             <Typography variant="h6">
               Scene {sceneResult.scene_number}
             </Typography>
+            {(sceneResult.regen_attempts ?? 0) > 0 && (
+              <Chip
+                label={`${sceneResult.regen_attempts} QC regen`}
+                size="small"
+                sx={{
+                  backgroundColor: 'rgba(232, 113, 10, 0.85)',
+                  color: 'common.white',
+                  fontSize: 11,
+                  fontWeight: 600,
+                }}
+              />
+            )}
+            {sceneResult.qc_rewrite_context && (
+              <Chip
+                label="QC-informed"
+                size="small"
+                color="info"
+                variant="outlined"
+                sx={{ fontSize: 11 }}
+              />
+            )}
             {onRegenScene && !readOnly && (
-              <Tooltip title="Regenerate this scene">
+              <Tooltip title="Regenerate this scene using QC feedback from current result">
                 <IconButton
                   size="small"
                   onClick={() => onRegenScene(sceneResult.scene_number, buildOptions(controlValues))}
@@ -551,6 +573,43 @@ export default function VideoPlayer({
               );
             })}
           </Grid>
+
+          {/* QC Rewrite Context — expandable */}
+          {sceneResult.qc_rewrite_context && (
+            <Box sx={{ mt: 1.5 }}>
+              <Box
+                onClick={() => setExpandedQcContext((p) => ({ ...p, [sceneResult.scene_number]: !p[sceneResult.scene_number] }))}
+                sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: 0.5 }}
+              >
+                <Typography variant="caption" sx={{ fontWeight: 500, color: 'info.main' }}>
+                  QC Feedback Used for Rewrite
+                </Typography>
+                {expandedQcContext[sceneResult.scene_number] ? <ExpandLess sx={{ fontSize: 16 }} /> : <ExpandMore sx={{ fontSize: 16 }} />}
+              </Box>
+              <Collapse in={!!expandedQcContext[sceneResult.scene_number]}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    display: 'block',
+                    mt: 0.5,
+                    p: 1,
+                    bgcolor: 'action.hover',
+                    borderRadius: 1,
+                    fontFamily: 'monospace',
+                    fontSize: 11,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    maxHeight: 200,
+                    overflow: 'auto',
+                    borderLeft: 3,
+                    borderColor: 'info.main',
+                  }}
+                >
+                  {sceneResult.qc_rewrite_context}
+                </Typography>
+              </Collapse>
+            </Box>
+          )}
 
           {/* Prompt used — expandable */}
           {sceneResult.prompt_used && (

@@ -232,13 +232,24 @@ export function usePipeline() {
     sceneNumber: number,
     options?: VideoGenerateOptions,
   ) => {
-    const { runId, script, storyboardResults } = usePipelineStore.getState();
+    const { runId, script, storyboardResults, videoResults } = usePipelineStore.getState();
     if (!runId || !script) return;
     const scene = script.scenes.find((s) => s.scene_number === sceneNumber);
     const sbResult = storyboardResults.find((r) => r.scene_number === sceneNumber);
     if (!scene || !sbResult) return;
     store.setError(null);
-    store.addLog(`Regenerating video for scene ${sceneNumber}...`, 'info');
+
+    // Extract QC report from current selected variant to inform the regen
+    const currentResult = videoResults.find((r) => r.scene_number === sceneNumber);
+    const selectedVariant = currentResult?.variants.find(
+      (v) => v.index === currentResult.selected_index,
+    );
+    const previousQcReport = selectedVariant?.qc_report ?? undefined;
+
+    store.addLog(
+      `Regenerating video for scene ${sceneNumber}${previousQcReport ? ' (with QC feedback)' : ''}...`,
+      'info',
+    );
 
     try {
       const response = await pipelineApi.regenVideoScene(
@@ -248,6 +259,7 @@ export function usePipeline() {
         sbResult,
         script.avatar_profile,
         options,
+        previousQcReport,
       );
       store.updateVideoScene(sceneNumber, response.result);
       store.addLog(`Scene ${sceneNumber} video regenerated`, 'success');

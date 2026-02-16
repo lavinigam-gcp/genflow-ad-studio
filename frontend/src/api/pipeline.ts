@@ -10,6 +10,7 @@ import type {
   StoryboardGenerateOptions,
   VideoResult,
   VideoGenerateOptions,
+  VideoQCReport,
   Job,
   VideoScript,
   ScriptConfig,
@@ -109,6 +110,7 @@ export async function regenVideoScene(
   storyboardResult: StoryboardResult,
   avatarProfile: AvatarProfile,
   options?: VideoGenerateOptions,
+  previousQcReport?: VideoQCReport,
 ): Promise<{ status: string; result: VideoResult }> {
   return api.post<{ status: string; result: VideoResult }>(
     '/pipeline/video/regen-scene',
@@ -119,6 +121,7 @@ export async function regenVideoScene(
       storyboard_result: storyboardResult,
       avatar_profile: avatarProfile,
       ...options,
+      ...(previousQcReport ? { previous_qc_report: previousQcReport } : {}),
     },
   );
 }

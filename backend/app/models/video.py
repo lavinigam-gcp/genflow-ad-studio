@@ -52,6 +52,7 @@ class VideoResult(BaseModel):
     selected_video_path: str
     regen_attempts: int = 0
     prompt_used: str = ""
+    qc_rewrite_context: str | None = None
 
 
 class VideoRegenRequest(BaseModel):
@@ -72,6 +73,7 @@ class VideoRegenRequest(BaseModel):
     use_reference_images: bool = True
     negative_prompt_extra: str = ""
     generate_audio: bool = True
+    previous_qc_report: VideoQCReport | None = None
 
 
 class VideoSelectRequest(BaseModel):
