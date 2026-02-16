@@ -35,6 +35,9 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Imagen 4 + Veo 3
 - Imagen 4 does NOT support `negative_prompt` — use positive prompting only
 - Dialogue: colon notation without quotes (prevents Veo text rendering)
 - Transition types in script map to FFmpeg xfade effects via `TRANSITION_MAP` in `ffmpeg.py`
+- Every prompt template field must be wired end-to-end: model field → service → template `.format()` — no phantom fields
+- Avatar demographic overrides (`override_gender`, `override_ethnicity`, `override_age_range`) replace `visual_description` with generic text to avoid conflicting prompt instructions
+- Append `?t={timestamp}` cache-buster to image paths on regeneration so browsers show fresh images
 
 ## Navigation Pattern (Optimistic)
 
