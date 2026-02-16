@@ -116,10 +116,10 @@ export default function VideoPlayer({
   const [veoModel, setVeoModel] = useState('veo-3.1-generate-preview');
   const [duration, setDuration] = useState('8');
   const [resolution, setResolution] = useState('720p');
-  const [numVariants, setNumVariants] = useState(4);
+  const [numVariants, setNumVariants] = useState(1);
   const [compression, setCompression] = useState('optimized');
   const [useReferenceImages, setUseReferenceImages] = useState(true);
-  const [qcThreshold, setQcThreshold] = useState(6);
+  const [qcThreshold, setQcThreshold] = useState(3);
   const [maxQcRegen, setMaxQcRegen] = useState(2);
   const [negativePrompt, setNegativePrompt] = useState('');
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 2 ** 31).toString());
@@ -245,9 +245,15 @@ export default function VideoPlayer({
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
-                  Compression
-                </Typography>
+                <Tooltip
+                  title="Optimized: smaller file size with near-identical visual quality (H.264/H.265 encoding). Lossless: preserves every pixel — much larger files, best for final master exports or further editing."
+                  placement="top"
+                  arrow
+                >
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', cursor: 'help' }}>
+                    Compression
+                  </Typography>
+                </Tooltip>
                 <ToggleButtonGroup
                   value={compression}
                   exclusive
@@ -418,7 +424,6 @@ export default function VideoPlayer({
                 <IconButton
                   size="small"
                   onClick={() => onRegenScene(sceneResult.scene_number, buildOptions(controlValues))}
-                  disabled={isLoading}
                   sx={{ color: 'text.secondary' }}
                 >
                   <Refresh fontSize="small" />
@@ -447,7 +452,10 @@ export default function VideoPlayer({
                       }}
                     />
                   )}
-                  <Box sx={{ position: 'relative', bgcolor: 'common.black' }}>
+                  <Box
+                    sx={{ position: 'relative', bgcolor: 'common.black' }}
+                    onClickCapture={(e) => e.stopPropagation()}
+                  >
                     <video
                       src={variant.video_path}
                       controls
@@ -531,7 +539,6 @@ export default function VideoPlayer({
                     {onSelectVariant && !readOnly ? (
                       <CardActionArea
                         onClick={() => onSelectVariant(sceneResult.scene_number, variant.index)}
-                        disabled={isLoading}
                         sx={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
                       >
                         {cardContent}
