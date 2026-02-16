@@ -64,11 +64,13 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Imagen 4 + Veo 3
 
 ## Layout
 
-- **AppBar**: Centered logo only (`frontend/src/components/layout/AppBar.tsx`)
+- **AppBar**: Centered logo + `ThemeToggle` (light/dark) top-right (`AppBar.tsx`)
 - **Floating nav sidebar**: Fixed vertical icon buttons on the left edge with tooltips (`MainLayout.tsx`)
 - **Stepper**: Horizontal pipeline progress below the header (`MainLayout.tsx`)
+- **InsightPanel**: Slide-out panel on right edge showing pipeline step progress (`InsightPanel.tsx`)
 - **Main content**: Centered max-width 1400px area
 - Nav items defined in `MainLayout.tsx` `NAV_ITEMS` array — add icons from `@mui/icons-material`
+- Dark/light theme: MUI v7 `colorSchemes` + `cssVariables` in `theme.ts` — see frontend rules for details
 
 ## Structure
 

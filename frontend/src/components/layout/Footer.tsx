@@ -16,7 +16,7 @@ export default function Footer() {
         py: 3,
         px: 2,
         textAlign: 'center',
-        backgroundColor: '#FAFBFC',
+        backgroundColor: 'background.default',
         borderTop: '1px solid',
         borderColor: 'divider',
       }}
@@ -26,7 +26,7 @@ export default function Footer() {
         <Favorite
           sx={{
             fontSize: 16,
-            color: '#D93025',
+            color: 'error.main',
             '&:hover': { animation: 'pulse 1s ease-in-out infinite' },
           }}
         />

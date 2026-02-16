@@ -8,10 +8,7 @@ import StoryboardGrid from './StoryboardGrid';
 import VideoPlayer from './VideoPlayer';
 import FinalPlayer from './FinalPlayer';
 import ReviewActions from '../review/ReviewActions';
-import PipelineInsight from '../common/PipelineInsight';
 import { usePipeline } from '../../hooks/usePipeline';
-
-const STEP_NAMES = ['Analyzing Input', 'Generating Script', 'Generating Avatar', 'Creating Storyboard', 'Generating Videos', 'Stitching Video', 'Reviewing'];
 
 export default function PipelineView() {
   const pipeline = usePipeline();
@@ -138,12 +135,6 @@ export default function PipelineView() {
 
   return (
     <>
-      <PipelineInsight
-        currentStep={pipeline.activeStep}
-        stepName={STEP_NAMES[pipeline.activeStep] || 'Processing'}
-        isLoading={pipeline.isLoading}
-      />
-
       {/* Run ID banner */}
       {runId && (
         <Box
@@ -154,7 +145,7 @@ export default function PipelineView() {
             mb: 2,
             px: 2,
             py: 1,
-            backgroundColor: '#F8F9FA',
+            backgroundColor: 'background.default',
             borderRadius: 2,
             border: '1px solid',
             borderColor: 'divider',

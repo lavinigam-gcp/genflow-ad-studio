@@ -205,7 +205,7 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false }: P
   };
 
   return (
-    <Card sx={{ maxWidth: 800, mx: 'auto', borderTop: '3px solid #1A73E8' }}>
+    <Card sx={{ maxWidth: 800, mx: 'auto', borderTop: '3px solid', borderTopColor: 'primary.main' }}>
       <CardContent sx={{ p: 4 }}>
         <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
           Create Video Campaign
@@ -333,9 +333,9 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false }: P
                   px: 3,
                   fontWeight: 600,
                   '&.Mui-selected': {
-                    backgroundColor: '#1A73E8',
-                    color: '#FFFFFF',
-                    '&:hover': { backgroundColor: '#1558B0' },
+                    backgroundColor: 'primary.main',
+                    color: 'primary.contrastText',
+                    '&:hover': { backgroundColor: 'primary.dark' },
                   },
                 }}
               >

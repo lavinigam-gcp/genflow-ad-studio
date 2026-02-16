@@ -27,7 +27,7 @@ export default function SceneCard({ scene, isEditing, onChange }: SceneCardProps
   };
 
   return (
-    <Card variant="outlined" sx={{ borderColor: '#DADCE0', backgroundColor: '#F8F9FA', borderLeft: '3px solid #1A73E8' }}>
+    <Card variant="outlined" sx={{ borderColor: 'divider', backgroundColor: 'background.default', borderLeft: '3px solid', borderLeftColor: 'primary.main' }}>
       <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
         {/* Header row: scene number, scene type, duration */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
@@ -58,7 +58,7 @@ export default function SceneCard({ scene, isEditing, onChange }: SceneCardProps
             label={`${scene.duration_seconds}s`}
             variant="outlined"
             size="small"
-            sx={{ borderColor: '#DADCE0' }}
+            sx={{ borderColor: 'divider' }}
           />
         </Box>
 
@@ -113,7 +113,7 @@ export default function SceneCard({ scene, isEditing, onChange }: SceneCardProps
               <Box
                 sx={{
                   borderLeft: '3px solid',
-                  borderColor: '#1A73E8',
+                  borderColor: 'primary.main',
                   pl: 1.5,
                   py: 0.5,
                 }}
@@ -151,7 +151,7 @@ export default function SceneCard({ scene, isEditing, onChange }: SceneCardProps
               mt: 1,
               pt: 1.5,
               borderTop: '1px solid',
-              borderColor: '#DADCE0',
+              borderColor: 'divider',
               display: 'flex',
               flexDirection: 'column',
               gap: 1.5,
@@ -258,7 +258,7 @@ function LabeledField({ label, value, field, isEditing, onChange }: LabeledField
           label={value}
           size="small"
           variant="outlined"
-          sx={{ borderColor: '#DADCE0', maxWidth: '100%' }}
+          sx={{ borderColor: 'divider', maxWidth: '100%' }}
         />
       )}
     </Box>

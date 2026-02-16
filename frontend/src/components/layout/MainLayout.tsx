@@ -13,6 +13,7 @@ import {
   Fab,
   Badge,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import {
   CheckCircle,
   AccountTree,
@@ -26,6 +27,7 @@ import {
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import AppBar from './AppBar';
 import Footer from './Footer';
+import InsightPanel from './InsightPanel';
 import { usePipelineStore } from '../../store/pipelineStore';
 
 const NAV_ITEMS = [
@@ -57,14 +59,12 @@ function StepIcon({
   viewing?: boolean;
   icon: React.ReactNode;
 }) {
-  // Active means "processing" in our new logic (spinner)
   if (active) {
     return <CircularProgress size={20} thickness={5} />;
   }
   if (completed) {
     return <CheckCircle sx={{ color: 'success.main', fontSize: 24 }} />;
   }
-  // Viewing means "currently on this step" but not processing
   if (viewing) {
     return (
       <Box
@@ -91,13 +91,13 @@ function StepIcon({
         width: 24,
         height: 24,
         borderRadius: '50%',
-        backgroundColor: '#DADCE0',
+        backgroundColor: 'divider',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         fontSize: 12,
         fontWeight: 500,
-        color: '#5F6368',
+        color: 'text.secondary',
       }}
     >
       {icon}
@@ -106,6 +106,7 @@ function StepIcon({
 }
 
 export default function MainLayout() {
+  const theme = useTheme();
   const activeStep = usePipelineStore((s) => s.activeStep);
   const setStep = usePipelineStore((s) => s.setStep);
   const isLoading = usePipelineStore((s) => s.isLoading);
@@ -150,6 +151,17 @@ export default function MainLayout() {
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  const logLevelColor = (level: string) => {
+    const colors: Record<string, string> = {
+      info: theme.palette.primary.main,
+      success: theme.palette.success.main,
+      error: theme.palette.error.main,
+      warn: theme.palette.warning.main,
+      dim: theme.palette.text.disabled,
+    };
+    return colors[level] || theme.palette.primary.main;
+  };
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -210,7 +222,7 @@ export default function MainLayout() {
           py: 2,
           px: 3,
           pl: { xs: 3, sm: 10 },
-          background: 'linear-gradient(180deg, #FFFFFF 0%, #F8F9FA 100%)',
+          background: 'linear-gradient(180deg, var(--mui-palette-background-paper) 0%, var(--mui-palette-background-default) 100%)',
           borderBottom: '1px solid',
           borderColor: 'divider',
         }}
@@ -223,10 +235,6 @@ export default function MainLayout() {
           {STEPS.map((label, index) => {
             const canNavigate = index <= maxStep;
 
-            // Logic for visual states:
-            // - Loading: Only show spinner on the maxStep if loading
-            // - Completed: Steps before the maxStep are completed
-            // - Viewing: The user is currently looking at this step (index === activeStep)
             const isProcessing = index === activeStep && isLoading;
             const isCompleted = index < maxStep;
             const isViewing = index === activeStep;
@@ -297,6 +305,8 @@ export default function MainLayout() {
 
       <Footer />
 
+      <InsightPanel />
+
       {/* Floating log FAB */}
       <Fab
         size="medium"
@@ -329,7 +339,7 @@ export default function MainLayout() {
           },
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', backgroundColor: '#F1F3F4' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', backgroundColor: 'action.hover' }}>
           <Terminal sx={{ fontSize: 18, color: 'text.secondary', mr: 1 }} />
           <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 600 }}>
             Pipeline Logs ({logs.length})
@@ -345,14 +355,14 @@ export default function MainLayout() {
             overflow: 'auto',
             px: 2,
             py: 1,
-            backgroundColor: '#FAFBFC',
+            backgroundColor: 'background.default',
             fontFamily: '"Roboto Mono", monospace',
             fontSize: 13,
             lineHeight: 1.8,
           }}
         >
           {logs.length === 0 ? (
-            <Typography variant="caption" sx={{ color: '#9AA0A6', fontFamily: '"Roboto Mono", monospace' }}>
+            <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: '"Roboto Mono", monospace' }}>
               No logs yet
             </Typography>
           ) : (
@@ -361,7 +371,7 @@ export default function MainLayout() {
                 <Typography
                   component="span"
                   sx={{
-                    color: '#9AA0A6',
+                    color: 'text.disabled',
                     fontFamily: '"Roboto Mono", monospace',
                     fontSize: 13,
                     whiteSpace: 'nowrap',
@@ -372,7 +382,7 @@ export default function MainLayout() {
                 <Typography
                   component="span"
                   sx={{
-                    color: { info: '#1A73E8', success: '#1E8E3E', error: '#D93025', warn: '#E8710A', dim: '#9AA0A6' }[log.level] || '#1A73E8',
+                    color: logLevelColor(log.level),
                     fontFamily: '"Roboto Mono", monospace',
                     fontSize: 13,
                     wordBreak: 'break-word',

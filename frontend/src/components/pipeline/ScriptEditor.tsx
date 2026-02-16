@@ -206,13 +206,15 @@ export default function ScriptEditor({
               lineHeight: 1.6,
               p: 2,
               border: '1px solid',
-              borderColor: '#DADCE0',
+              borderColor: 'divider',
               borderRadius: 1,
               resize: 'vertical',
               overflow: 'auto',
               boxSizing: 'border-box',
               outline: 'none',
-              '&:focus': { borderColor: '#1A73E8', borderWidth: 2 },
+              backgroundColor: 'background.paper',
+              color: 'text.primary',
+              '&:focus': { borderColor: 'primary.main', borderWidth: 2 },
             }}
             rows={25}
           />

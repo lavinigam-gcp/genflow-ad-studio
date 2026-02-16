@@ -90,7 +90,7 @@ export default function TransitionIndicator({
         sx={{
           width: 2,
           height: 20,
-          bgcolor: '#DADCE0',
+          bgcolor: 'divider',
         }}
       />
 
@@ -102,8 +102,9 @@ export default function TransitionIndicator({
             flexDirection: 'column',
             alignItems: 'center',
             gap: 1,
-            bgcolor: '#F8F9FA',
-            border: '1px solid #DADCE0',
+            bgcolor: 'background.default',
+            border: '1px solid',
+            borderColor: 'divider',
             borderRadius: '12px',
             px: 2,
             py: 1.5,
@@ -177,8 +178,9 @@ export default function TransitionIndicator({
               display: 'flex',
               alignItems: 'center',
               gap: 0.5,
-              bgcolor: '#F8F9FA',
-              border: '1px solid #DADCE0',
+              bgcolor: 'background.default',
+              border: '1px solid',
+            borderColor: 'divider',
               borderRadius: '12px',
               px: 1.5,
               py: 0.5,
@@ -217,7 +219,7 @@ export default function TransitionIndicator({
         sx={{
           width: 2,
           height: 20,
-          bgcolor: '#DADCE0',
+          bgcolor: 'divider',
         }}
       />
     </Box>
