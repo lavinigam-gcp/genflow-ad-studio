@@ -60,6 +60,7 @@ class AvatarService:
                 visual_description=avatar_profile.visual_description,
                 attire=avatar_profile.attire,
                 ethnicity=ethnicity_prefix,
+                tone_of_voice=avatar_profile.tone_of_voice or "confident and approachable",
             )
 
         # If a reference image was uploaded, load its bytes for Gemini
@@ -77,6 +78,7 @@ class AvatarService:
         use_imagen = image_model and image_model.startswith("imagen-")
 
         if use_imagen:
+            # Imagen doesn't support reference images, so we only pass prompt
             image_bytes_list = await self.imagen.generate_avatar(
                 prompt=prompt,
                 num_variants=effective_variants,
@@ -85,6 +87,7 @@ class AvatarService:
             image_bytes_list = await self.gemini_image.generate_avatar(
                 prompt=prompt,
                 num_variants=effective_variants,
+                reference_bytes=reference_bytes,
             )
 
         variants: list[AvatarVariant] = []

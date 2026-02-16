@@ -121,6 +121,7 @@ class VideoService:
             voice_style=voice_style,
             script_dialogue=scene.script_dialogue,
             sound_design=scene.sound_design,
+            audio_continuity=scene.audio_continuity or "",
         )
 
         # 3. Generate video variants via Veo

@@ -183,12 +183,12 @@ AVATAR_PROMPT_TEMPLATE = """\
 Photorealistic studio portrait photograph of a {ethnicity}{gender} presenter, \
 age {age_range}. {visual_description}. \
 Wearing {attire}. \
+Their expression conveys a {tone_of_voice} personality. \
 Medium shot, head and shoulders visible. \
 Shot on 85mm portrait lens, f/2.8, shallow depth of field. \
 Professional 3-point studio lighting: key light at 45 degrees camera right, \
 fill light camera left, hair light from above-behind. \
 Pure white seamless backdrop. \
-Warm, confident, approachable expression with direct eye contact. \
 Natural skin texture, no retouching artifacts. \
 NOT an illustration, NOT a cartoon, NOT a 3D render. \
 Photorealistic only.\
@@ -235,7 +235,7 @@ DIALOGUE AND VOICE:
 The subject speaks in a {voice_style} voice: {script_dialogue}
 
 AUDIO:
-{sound_design}.
+{sound_design}. {audio_continuity}
 
 Smooth, natural motion with broadcast-quality cinematography. \
 Photorealistic rendering, no text overlays, no watermarks.\

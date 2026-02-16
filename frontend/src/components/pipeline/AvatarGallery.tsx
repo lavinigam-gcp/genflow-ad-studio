@@ -17,6 +17,8 @@ import {
   CircularProgress,
   Dialog,
   IconButton,
+  ToggleButtonGroup,
+  ToggleButton,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import {
@@ -28,6 +30,13 @@ import {
 } from '@mui/icons-material';
 import type { AvatarVariant, AvatarGenerateOptions } from '../../types';
 import { uploadImage } from '../../api/pipeline';
+
+const ETHNICITIES = [
+  '', 'South Asian', 'East Asian', 'Southeast Asian', 'Black', 'White',
+  'Latino', 'Middle Eastern', 'Mixed',
+];
+
+const AGE_RANGES = ['18-25', '25-35', '35-45', '45-55', '55+'];
 
 const IMAGE_MODELS = [
   { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image', description: 'Default' },
@@ -61,6 +70,9 @@ export default function AvatarGallery({
   const [referenceImageUrl, setReferenceImageUrl] = useState('');
   const [uploadLoading, setUploadLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [ethnicity, setEthnicity] = useState('');
+  const [gender, setGender] = useState('');
+  const [ageRange, setAgeRange] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = useCallback(async (file: File) => {
@@ -82,6 +94,9 @@ export default function AvatarGallery({
       image_model: imageModel !== 'gemini-3-pro-image-preview' ? imageModel : undefined,
       custom_prompt: customPrompt || undefined,
       reference_image_url: referenceImageUrl || undefined,
+      override_ethnicity: ethnicity || undefined,
+      override_gender: gender || undefined,
+      override_age_range: ageRange || undefined,
     };
     onGenerate(options);
   };
@@ -108,6 +123,60 @@ export default function AvatarGallery({
             bgcolor: '#F8F9FA',
           }}
         >
+          {/* Character filters row */}
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            {/* Gender toggle */}
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                Gender
+              </Typography>
+              <ToggleButtonGroup
+                value={gender}
+                exclusive
+                onChange={(_, v) => { if (v !== null) setGender(v); }}
+                size="small"
+                disabled={isLoading}
+              >
+                <ToggleButton value="" sx={{ px: 1.5, textTransform: 'none' }}>Auto</ToggleButton>
+                <ToggleButton value="male" sx={{ px: 1.5, textTransform: 'none' }}>Male</ToggleButton>
+                <ToggleButton value="female" sx={{ px: 1.5, textTransform: 'none' }}>Female</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+
+            {/* Ethnicity */}
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+              <InputLabel>Ethnicity</InputLabel>
+              <Select
+                value={ethnicity}
+                label="Ethnicity"
+                onChange={(e: SelectChangeEvent) => setEthnicity(e.target.value)}
+                disabled={isLoading}
+              >
+                <MenuItem value="">Auto (from script)</MenuItem>
+                {ETHNICITIES.filter(Boolean).map((e) => (
+                  <MenuItem key={e} value={e}>{e}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {/* Age range */}
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel>Age Range</InputLabel>
+              <Select
+                value={ageRange}
+                label="Age Range"
+                onChange={(e: SelectChangeEvent) => setAgeRange(e.target.value)}
+                disabled={isLoading}
+              >
+                <MenuItem value="">Auto (from script)</MenuItem>
+                {AGE_RANGES.map((a) => (
+                  <MenuItem key={a} value={a}>{a}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+
+          {/* Model + Variants row */}
           <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             {/* Variants slider */}
             <Box sx={{ minWidth: 200 }}>

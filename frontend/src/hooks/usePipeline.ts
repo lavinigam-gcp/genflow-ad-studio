@@ -51,7 +51,13 @@ export function usePipeline() {
         script.avatar_profile,
         options,
       );
-      store.setAvatars(response.variants);
+      // Append cache-buster so browser doesn't show stale images
+      const cacheBust = Date.now();
+      const variants = response.variants.map((v) => ({
+        ...v,
+        image_path: `${v.image_path}?t=${cacheBust}`,
+      }));
+      store.setAvatars(variants);
       store.addLog(`Generated ${response.variants.length} avatar variants`, 'success');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to generate avatars';

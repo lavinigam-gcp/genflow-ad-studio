@@ -92,9 +92,34 @@ async def generate_avatars(
 ) -> AvatarResponse:
     """Generate avatar variants."""
     try:
+        # Merge any user overrides into avatar_profile
+        profile = request.avatar_profile
+        has_demographic_override = bool(
+            request.override_ethnicity or request.override_gender or request.override_age_range
+        )
+        if request.override_ethnicity:
+            profile = profile.model_copy(update={"ethnicity": request.override_ethnicity})
+        if request.override_gender:
+            profile = profile.model_copy(update={"gender": request.override_gender})
+        if request.override_age_range:
+            profile = profile.model_copy(update={"age_range": request.override_age_range})
+
+        # When demographics change, the original visual_description likely
+        # conflicts (e.g., "28-year-old South Asian man" won't match a
+        # "female East Asian" override).  Replace it with a generic
+        # description that lets the model fill in demographic-appropriate
+        # features based on the gender/ethnicity/age fields.
+        if has_demographic_override:
+            profile = profile.model_copy(update={
+                "visual_description": (
+                    f"Professional presenter with a confident, photogenic appearance. "
+                    f"Wearing {profile.attire}."
+                ),
+            })
+
         response = await avatar_svc.generate_avatars(
             run_id=request.run_id,
-            avatar_profile=request.avatar_profile,
+            avatar_profile=profile,
             num_variants=request.num_variants,
             image_model=request.image_model,
             custom_prompt=request.custom_prompt,

@@ -35,11 +35,26 @@ class GeminiImageService:
         self.settings = settings
 
     @async_retry(retries=3)
-    async def _generate_single_image(self, prompt: str) -> bytes:
-        """Generate a single image and return raw bytes."""
+    async def _generate_single_image(
+        self, prompt: str, reference_bytes: bytes | None = None
+    ) -> bytes:
+        """Generate a single image and return raw bytes.
+
+        If reference_bytes is provided, it's passed as a reference image
+        before the text prompt for style/appearance guidance.
+        """
+        if reference_bytes:
+            ref_part = types.Part.from_bytes(
+                data=reference_bytes, mime_type="image/png"
+            )
+            text_part = types.Part.from_text(text=prompt)
+            contents = [ref_part, text_part]
+        else:
+            contents = prompt
+
         response = await self.client.aio.models.generate_content(
             model=self.settings.image_model,
-            contents=prompt,
+            contents=contents,
             config=types.GenerateContentConfig(
                 response_modalities=["IMAGE"],
                 safety_settings=ALL_SAFETY_OFF,
@@ -54,14 +69,20 @@ class GeminiImageService:
         raise ValueError("No image data in response")
 
     async def generate_avatar(
-        self, prompt: str, num_variants: int = 4
+        self,
+        prompt: str,
+        num_variants: int = 4,
+        reference_bytes: bytes | None = None,
     ) -> list[bytes]:
         """Generate avatar variants concurrently.
 
         Each call produces 1 image, so we run num_variants calls
         concurrently and return the collected image bytes.
         """
-        tasks = [self._generate_single_image(prompt) for _ in range(num_variants)]
+        tasks = [
+            self._generate_single_image(prompt, reference_bytes)
+            for _ in range(num_variants)
+        ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         images: list[bytes] = []

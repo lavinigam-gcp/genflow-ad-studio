@@ -72,6 +72,9 @@ export interface AvatarGenerateOptions {
   image_model?: string;
   custom_prompt?: string;
   reference_image_url?: string;
+  override_ethnicity?: string;
+  override_gender?: string;
+  override_age_range?: string;
 }
 
 export interface AvatarVariant {
