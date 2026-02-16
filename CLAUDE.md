@@ -25,7 +25,7 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Imagen 4 + Veo 3
 - `@async_retry` on all AI SDK calls (Gemini + Veo)
 - Frontend types (`types/index.ts`) must mirror backend Pydantic models exactly
 - Veo outputs VFR video — always preprocess to 24fps CFR before stitching
-- QC feedback loop: generate → QC score → rewrite prompt → regenerate (max 3 attempts)
+- QC feedback loop: generate → QC score → rewrite prompt → regenerate (max 3 attempts); manual regen auto-carries `previous_qc_report` for QC-informed prompt rewriting
 - SSE events: add to `SSEEventType` enum + backend `broadcaster.emit()` + frontend `useSSE` handler
 - SSE progressive loading: interactive mode uses SSE side-channel (`openSceneProgressSSE` in `usePipeline.ts`) alongside POST for incremental scene rendering
 - SSE named events require `addEventListener('scene_progress', handler)` — `onmessage` only fires for unnamed events
@@ -45,6 +45,8 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Imagen 4 + Veo 3
 - Avatar demographic overrides (`override_gender`, `override_ethnicity`, `override_age_range`) replace `visual_description` with generic text to avoid conflicting prompt instructions
 - Append `?t={timestamp}` cache-buster to image paths on regeneration so browsers show fresh images
 - `ModelBadge` component (`components/common/ModelBadge.tsx`): "Nano Banana Pro" shimmer badge shown on Avatar + Storyboard screens
+- Video inside `CardActionArea`: wrap `<video>` container with `onClickCapture={(e) => e.stopPropagation()}` so native controls work
+- Don't `disabled={isLoading}` on per-scene interactive elements during progressive loading — only disable batch-level controls
 
 ## Navigation Pattern (Optimistic)
 
