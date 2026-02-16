@@ -36,6 +36,15 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Imagen 4 + Veo 3
 - Dialogue: colon notation without quotes (prevents Veo text rendering)
 - Transition types in script map to FFmpeg xfade effects via `TRANSITION_MAP` in `ffmpeg.py`
 
+## Navigation Pattern (Optimistic)
+
+- **Input → Script**: `startPipeline` sets `activeStep=1` immediately, then calls API. ScriptEditor handles `script: null` with skeleton loading. On error, navigates back to step 0.
+- **Script → Avatar**: `navigateToAvatarStep` sets `activeStep=2` without generating. AvatarGallery shows controls first (model, variants, prompt), user clicks "Generate Avatars" explicitly.
+- **Avatar → Storyboard**: `confirmAvatarSelection` selects avatar + auto-generates storyboard on step 3.
+- Never pass `onClick={asyncFn}` directly — wrap as `onClick={() => asyncFn()}` to prevent MouseEvent leaking as function arguments.
+- All hooks must be declared before any early return in a component (React hooks ordering rule).
+- Stepper spinner shows on `activeStep` (not `maxStep`) — see `MainLayout.tsx`.
+
 ## Session Continuity
 
 - Interactive pipeline creates a job in SQLite at each step (`pipeline.py` endpoints persist via `job_store`)
