@@ -10,6 +10,8 @@ class AvatarRequest(BaseModel):
     image_model: str | None = None
     custom_prompt: str = ""
     reference_image_url: str = ""
+    aspect_ratio: str = "9:16"
+    image_size: str = "2K"
     # Profile overrides — merged into avatar_profile before prompt building
     override_ethnicity: str = ""
     override_gender: str = ""

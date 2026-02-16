@@ -29,6 +29,7 @@ class ImagenService:
         prompt: str,
         model: str | None = None,
         num_images: int = 4,
+        aspect_ratio: str = "9:16",
     ) -> list[bytes]:
         """Generate images using Imagen 4.
 
@@ -40,7 +41,7 @@ class ImagenService:
         config = types.GenerateImagesConfig(
             number_of_images=min(num_images, 4),
             person_generation="allow_all",
-            aspect_ratio="9:16",
+            aspect_ratio=aspect_ratio,
         )
 
         response = await asyncio.to_thread(
@@ -65,14 +66,16 @@ class ImagenService:
         return images
 
     async def generate_avatar(
-        self, prompt: str, num_variants: int = 4
+        self, prompt: str, num_variants: int = 4, aspect_ratio: str = "9:16"
     ) -> list[bytes]:
         """Generate avatar variants using Imagen 4.
 
         For >4 variants, runs multiple batches concurrently.
         """
         if num_variants <= 4:
-            return await self.generate_images(prompt, num_images=num_variants)
+            return await self.generate_images(
+                prompt, num_images=num_variants, aspect_ratio=aspect_ratio
+            )
 
         # Batch into groups of 4
         batches: list[int] = []
@@ -82,7 +85,10 @@ class ImagenService:
             batches.append(batch_size)
             remaining -= batch_size
 
-        tasks = [self.generate_images(prompt, num_images=n) for n in batches]
+        tasks = [
+            self.generate_images(prompt, num_images=n, aspect_ratio=aspect_ratio)
+            for n in batches
+        ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         images: list[bytes] = []

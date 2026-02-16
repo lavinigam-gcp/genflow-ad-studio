@@ -34,6 +34,8 @@ class AvatarService:
         image_model: str | None = None,
         custom_prompt: str = "",
         reference_image_url: str = "",
+        aspect_ratio: str = "9:16",
+        image_size: str = "2K",
     ) -> AvatarResponse:
         """Generate avatar variants from a profile description.
 
@@ -82,12 +84,15 @@ class AvatarService:
             image_bytes_list = await self.imagen.generate_avatar(
                 prompt=prompt,
                 num_variants=effective_variants,
+                aspect_ratio=aspect_ratio,
             )
         else:
             image_bytes_list = await self.gemini_image.generate_avatar(
                 prompt=prompt,
                 num_variants=effective_variants,
                 reference_bytes=reference_bytes,
+                aspect_ratio=aspect_ratio,
+                image_size=image_size,
             )
 
         variants: list[AvatarVariant] = []

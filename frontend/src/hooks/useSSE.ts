@@ -13,6 +13,8 @@ export function useSSE(jobId: string | null) {
   const setVideos = usePipelineStore((s) => s.setVideos);
   const setFinalVideo = usePipelineStore((s) => s.setFinalVideo);
   const setError = usePipelineStore((s) => s.setError);
+  const addOrUpdateStoryboardScene = usePipelineStore((s) => s.addOrUpdateStoryboardScene);
+  const addOrUpdateVideoScene = usePipelineStore((s) => s.addOrUpdateVideoScene);
 
   const handleEvent = useCallback(
     (event: SSEEvent) => {
@@ -38,6 +40,18 @@ export function useSSE(jobId: string | null) {
             setAvatars(event.data.variants as Parameters<typeof setAvatars>[0]);
           }
           addLog('Avatar variants generated', 'success');
+          break;
+
+        case 'scene_progress':
+          if (event.data.result) {
+            const sceneResult = event.data.result as Record<string, unknown>;
+            if ('image_path' in sceneResult) {
+              addOrUpdateStoryboardScene(sceneResult as unknown as Parameters<typeof addOrUpdateStoryboardScene>[0]);
+            } else if ('variants' in sceneResult) {
+              addOrUpdateVideoScene(sceneResult as unknown as Parameters<typeof addOrUpdateVideoScene>[0]);
+            }
+            addLog(`Scene ${event.data.scene_number} completed`, 'info');
+          }
           break;
 
         case 'storyboard_ready':
@@ -83,7 +97,7 @@ export function useSSE(jobId: string | null) {
           }
       }
     },
-    [addLog, setStep, setScript, setAvatars, setStoryboard, setVideos, setFinalVideo, setError]
+    [addLog, setStep, setScript, setAvatars, setStoryboard, setVideos, setFinalVideo, setError, addOrUpdateStoryboardScene, addOrUpdateVideoScene]
   );
 
   useEffect(() => {

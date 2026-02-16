@@ -37,6 +37,7 @@ class StoryboardService:
         max_regen_attempts: int | None = None,
         include_composition_qc: bool = True,
         custom_prompts: dict[int, str] | None = None,
+        image_size: str = "2K",
     ) -> StoryboardResponse:
         """Generate storyboard images for all scenes with QC feedback loop.
 
@@ -64,6 +65,7 @@ class StoryboardService:
                     max_regen_attempts=max_regen_attempts,
                     include_composition_qc=include_composition_qc,
                     custom_prompt=custom_prompt,
+                    image_size=image_size,
                 )
 
         tasks = [process_scene(scene) for scene in scenes]
@@ -86,6 +88,7 @@ class StoryboardService:
         max_regen_attempts: int | None = None,
         include_composition_qc: bool = True,
         custom_prompt: str | None = None,
+        image_size: str = "2K",
     ) -> StoryboardResult:
         """Process a single scene with QC and regeneration loop."""
         effective_max_regen = max_regen_attempts if max_regen_attempts is not None else self.settings.max_regen_attempts
@@ -124,6 +127,8 @@ class StoryboardService:
                 avatar_bytes=avatar_bytes,
                 product_bytes=product_bytes,
                 image_model=image_model,
+                aspect_ratio=aspect_ratio,
+                image_size=image_size,
             )
 
             # Run QC
@@ -182,21 +187,22 @@ class StoryboardService:
             subdir=f"scenes/scene_{scene.scene_number}",
         )
 
-        if on_progress:
-            on_progress({
-                "scene_number": scene.scene_number,
-                "event": "scene_completed",
-                "qc_avatar": best_qc_report.avatar_validation.score,
-                "qc_product": best_qc_report.product_validation.score,
-            })
-
-        return StoryboardResult(
+        result = StoryboardResult(
             scene_number=scene.scene_number,
             image_path=self.storage.to_url_path(image_path),
             qc_report=best_qc_report,
             regen_attempts=regen_attempts,
             prompt_used=best_prompt,
         )
+
+        if on_progress:
+            on_progress({
+                "scene_number": scene.scene_number,
+                "event": "scene_completed",
+                "result": result.model_dump(),
+            })
+
+        return result
 
     async def regenerate_single_scene(
         self,
@@ -210,6 +216,7 @@ class StoryboardService:
         max_regen_attempts: int | None = None,
         include_composition_qc: bool = True,
         custom_prompt: str | None = None,
+        image_size: str = "2K",
     ) -> StoryboardResult:
         """Regenerate a single scene's storyboard image."""
         return await self._process_single_scene(
@@ -223,6 +230,7 @@ class StoryboardService:
             max_regen_attempts=max_regen_attempts,
             include_composition_qc=include_composition_qc,
             custom_prompt=custom_prompt,
+            image_size=image_size,
         )
 
     def _find_product_image(self, run_id: str) -> str:

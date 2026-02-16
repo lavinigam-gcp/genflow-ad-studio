@@ -5,6 +5,7 @@ from google import genai
 from google.genai import types
 
 from app.ai.prompts import VIDEO_NEGATIVE_PROMPT
+from app.ai.retry import async_retry
 from app.config import Settings
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,10 @@ class VeoService:
             )
         return operation
 
+    # GA models that silently ignore reference_images
+    GA_MODELS = {"veo-3.1-generate-001", "veo-3.1-fast-generate-001"}
+
+    @async_retry(retries=2, initial_delay=5.0, backoff_factor=2.0)
     async def generate_videos(
         self,
         prompt: str,
@@ -38,6 +43,7 @@ class VeoService:
         duration_seconds: int = 8,
         compression_quality: str = "optimized",
         veo_model: str | None = None,
+        generate_audio: bool = True,
     ) -> list[str]:
         """Generate video variants using Veo 3.1.
 
@@ -88,20 +94,32 @@ class VeoService:
             aspect_ratio=aspect_ratio,
             number_of_videos=num_variants,
             duration_seconds=effective_duration,
-            generate_audio=True,
+            generate_audio=generate_audio,
             negative_prompt=full_negative,
             person_generation=person_gen,
             output_gcs_uri=output_gcs_uri,
+            resolution=resolution,
         )
 
         if seed is not None:
             config_kwargs["seed"] = seed
 
+        model_id = veo_model or self.settings.veo_model
+
         # Veo API: `image` and `reference_images` are mutually exclusive.
         # When asset references are provided, use reference_images for
         # character/product consistency.  Otherwise fall back to `image`
         # for first-frame guidance from the storyboard.
+        #
+        # GA models silently ignore reference_images — fall back to
+        # storyboard first-frame mode to avoid silent quality degradation.
         use_asset_refs = bool(asset_image_uris)
+        if use_asset_refs and model_id in self.GA_MODELS:
+            logger.warning(
+                "GA model %s ignores reference_images — falling back to image mode",
+                model_id,
+            )
+            use_asset_refs = False
 
         if use_asset_refs:
             config_kwargs["reference_images"] = [
@@ -113,8 +131,6 @@ class VeoService:
             ]
 
         config = types.GenerateVideosConfig(**config_kwargs)
-
-        model_id = veo_model or self.settings.veo_model
 
         generate_kwargs: dict = dict(
             model=model_id,

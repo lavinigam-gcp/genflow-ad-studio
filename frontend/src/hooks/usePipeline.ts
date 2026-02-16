@@ -6,8 +6,34 @@ import type {
   VideoScript,
   AvatarGenerateOptions,
   StoryboardGenerateOptions,
+  StoryboardResult,
   VideoGenerateOptions,
+  VideoResult,
 } from '../types';
+
+/**
+ * Open an SSE connection that listens for the named `scene_progress` event.
+ * The backend sends named SSE events (with `event: scene_progress`), which
+ * require `addEventListener` — `onmessage` only fires for unnamed events.
+ */
+function openSceneProgressSSE(
+  runId: string,
+  onSceneResult: (data: Record<string, unknown>) => void,
+): EventSource {
+  const es = new EventSource(`/api/v1/jobs/${runId}/stream`);
+  es.addEventListener('scene_progress', (e: MessageEvent) => {
+    try {
+      const data = JSON.parse(e.data);
+      onSceneResult(data);
+    } catch {
+      // Ignore parse errors
+    }
+  });
+  // Suppress connection errors (SSE will auto-reconnect, and we close it
+  // when the POST completes anyway)
+  es.onerror = () => {};
+  return es;
+}
 
 export function usePipeline() {
   const store = usePipelineStore();
@@ -18,6 +44,8 @@ export function usePipeline() {
       store.setStep(1);
       store.setLoading(true);
       store.setError(null);
+      // Store the original request so ProductForm can show it on resume
+      usePipelineStore.setState({ originalRequest: request });
       store.addLog(`Starting script generation (model: ${request.gemini_model || 'gemini-3-flash-preview'})...`, 'info');
 
       try {
@@ -45,7 +73,7 @@ export function usePipeline() {
   }, [store]);
 
   const generateAvatars = useCallback(async (options?: AvatarGenerateOptions) => {
-    const { runId, script } = usePipelineStore.getState();
+    const { runId, script, aspectRatio } = usePipelineStore.getState();
     if (!runId || !script) return;
     store.setLoading(true);
     store.setError(null);
@@ -55,7 +83,7 @@ export function usePipeline() {
       const response = await pipelineApi.generateAvatars(
         runId,
         script.avatar_profile,
-        options,
+        { ...options, aspect_ratio: aspectRatio },
       );
       // Append cache-buster so browser doesn't show stale images
       const cacheBust = Date.now();
@@ -95,15 +123,28 @@ export function usePipeline() {
   }, [store]);
 
   const generateStoryboard = useCallback(async (options?: StoryboardGenerateOptions) => {
-    const { runId, script } = usePipelineStore.getState();
+    const { runId, script, aspectRatio } = usePipelineStore.getState();
     if (!runId || !script) return;
     store.setLoading(true);
     store.setError(null);
+    store.setStoryboard([]); // Clear previous results for progressive loading
     store.addLog(`Generating storyboard with QC for ${script.scenes.length} scenes...`, 'info');
+
+    // Open SSE side-channel for progressive scene updates
+    const es = openSceneProgressSSE(runId, (data) => {
+      if (data.result) {
+        const result = data.result as unknown as StoryboardResult;
+        const cacheBust = Date.now();
+        usePipelineStore.getState().addOrUpdateStoryboardScene({
+          ...result,
+          image_path: `${result.image_path}?t=${cacheBust}`,
+        });
+      }
+    });
 
     try {
       const t0 = Date.now();
-      const sbResponse = await pipelineApi.generateStoryboard(runId, script.scenes, options);
+      const sbResponse = await pipelineApi.generateStoryboard(runId, script.scenes, { ...options, aspect_ratio: aspectRatio });
       store.setStoryboard(sbResponse.results);
       const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
       store.addLog(
@@ -115,6 +156,7 @@ export function usePipeline() {
       store.setError(message);
       store.addLog(message, 'error');
     } finally {
+      es.close();
       store.setLoading(false);
     }
   }, [store]);
@@ -149,11 +191,20 @@ export function usePipeline() {
   }, [store]);
 
   const generateVideos = useCallback(async (options?: VideoGenerateOptions) => {
-    const { runId, storyboardResults, script } = usePipelineStore.getState();
+    const { runId, storyboardResults, script, aspectRatio } = usePipelineStore.getState();
     if (!runId || !script || storyboardResults.length === 0) return;
     store.setLoading(true);
     store.setError(null);
+    store.setVideos([]); // Clear previous results for progressive loading
     store.addLog(`Generating video variants with Veo 3.1 for ${storyboardResults.length} scenes...`, 'info');
+
+    // Open SSE side-channel for progressive scene updates
+    const es = openSceneProgressSSE(runId, (data) => {
+      if (data.result) {
+        const result = data.result as unknown as VideoResult;
+        usePipelineStore.getState().addOrUpdateVideoScene(result);
+      }
+    });
 
     try {
       const t0 = Date.now();
@@ -162,7 +213,7 @@ export function usePipeline() {
         storyboardResults,
         script.scenes,
         script.avatar_profile,
-        options,
+        { ...options, aspect_ratio: aspectRatio },
       );
       store.setVideos(response.results);
       const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
@@ -172,6 +223,7 @@ export function usePipeline() {
       store.setError(message);
       store.addLog(message, 'error');
     } finally {
+      es.close();
       store.setLoading(false);
     }
   }, [store]);

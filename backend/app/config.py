@@ -32,7 +32,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("image_model", "IMAGE_MODEL"),
     )
     veo_model: str = Field(
-        default="veo-3.1-generate-001",
+        default="veo-3.1-generate-preview",
         validation_alias=AliasChoices("veo_model", "VEO_MODEL", "VEO_MODEL_ID"),
     )
     veo_fast_model: str = "veo-3.1-fast-generate-001"

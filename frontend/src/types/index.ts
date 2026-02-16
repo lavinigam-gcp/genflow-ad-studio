@@ -75,6 +75,8 @@ export interface AvatarGenerateOptions {
   override_ethnicity?: string;
   override_gender?: string;
   override_age_range?: string;
+  aspect_ratio?: string;   // '9:16' or '16:9'
+  image_size?: string;     // '1K', '2K', '4K'
 }
 
 export interface AvatarVariant {
@@ -114,6 +116,7 @@ export interface StoryboardGenerateOptions {
   max_regen_attempts?: number;
   include_composition_qc?: boolean;
   custom_prompts?: Record<number, string>;
+  image_size?: string;     // '1K', '2K', '4K'
 }
 
 export interface StoryboardRegenRequest {
@@ -126,6 +129,7 @@ export interface StoryboardRegenRequest {
   max_regen_attempts?: number;
   include_composition_qc?: boolean;
   custom_prompt?: string;
+  image_size?: string;     // '1K', '2K', '4K'
 }
 
 export interface VideoQCDimension {
@@ -139,6 +143,8 @@ export interface VideoQCReport {
   avatar_consistency: VideoQCDimension;
   product_consistency: VideoQCDimension;
   temporal_coherence: VideoQCDimension;
+  hand_body_integrity: VideoQCDimension;
+  brand_text_accuracy: VideoQCDimension;
   overall_verdict: string;
 }
 
@@ -169,6 +175,7 @@ export interface VideoGenerateOptions {
   max_qc_regen_attempts?: number;
   use_reference_images?: boolean;
   negative_prompt_extra?: string;
+  generate_audio?: boolean;
 }
 
 export interface VideoRegenRequest {
@@ -188,6 +195,7 @@ export interface VideoRegenRequest {
   max_qc_regen_attempts?: number;
   use_reference_images?: boolean;
   negative_prompt_extra?: string;
+  generate_audio?: boolean;
 }
 
 export interface VideoSelectRequest {
@@ -226,6 +234,7 @@ export interface Job {
   status: JobStatus;
   created_at: string;
   updated_at: string;
+  request?: ScriptRequest;
   progress?: JobProgress;
   script?: VideoScript;
   avatar_variants?: AvatarVariant[];

@@ -36,7 +36,11 @@ class GeminiImageService:
 
     @async_retry(retries=3)
     async def _generate_single_image(
-        self, prompt: str, reference_bytes: bytes | None = None
+        self,
+        prompt: str,
+        reference_bytes: bytes | None = None,
+        aspect_ratio: str = "9:16",
+        image_size: str = "2K",
     ) -> bytes:
         """Generate a single image and return raw bytes.
 
@@ -59,6 +63,10 @@ class GeminiImageService:
                 response_modalities=["IMAGE"],
                 safety_settings=ALL_SAFETY_OFF,
                 temperature=1.0,
+                image_config=types.ImageConfig(
+                    aspect_ratio=aspect_ratio,
+                    image_size=image_size,
+                ),
             ),
         )
 
@@ -73,6 +81,8 @@ class GeminiImageService:
         prompt: str,
         num_variants: int = 4,
         reference_bytes: bytes | None = None,
+        aspect_ratio: str = "9:16",
+        image_size: str = "2K",
     ) -> list[bytes]:
         """Generate avatar variants concurrently.
 
@@ -80,7 +90,9 @@ class GeminiImageService:
         concurrently and return the collected image bytes.
         """
         tasks = [
-            self._generate_single_image(prompt, reference_bytes)
+            self._generate_single_image(
+                prompt, reference_bytes, aspect_ratio=aspect_ratio, image_size=image_size
+            )
             for _ in range(num_variants)
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -104,6 +116,8 @@ class GeminiImageService:
         avatar_bytes: bytes,
         product_bytes: bytes,
         image_model: str | None = None,
+        aspect_ratio: str = "9:16",
+        image_size: str = "2K",
     ) -> bytes:
         """Generate a storyboard image with avatar and product reference images.
 
@@ -125,6 +139,10 @@ class GeminiImageService:
                 response_modalities=["IMAGE"],
                 safety_settings=ALL_SAFETY_OFF,
                 temperature=1.0,
+                image_config=types.ImageConfig(
+                    aspect_ratio=aspect_ratio,
+                    image_size=image_size,
+                ),
             ),
         )
 

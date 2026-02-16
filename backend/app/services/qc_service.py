@@ -44,6 +44,12 @@ class QCService:
             avatar_consistency=VideoQCDimension(**raw["avatar_consistency"]),
             product_consistency=VideoQCDimension(**raw["product_consistency"]),
             temporal_coherence=VideoQCDimension(**raw["temporal_coherence"]),
+            hand_body_integrity=VideoQCDimension(
+                **raw.get("hand_body_integrity", {"score": 7, "reasoning": "Not evaluated"})
+            ),
+            brand_text_accuracy=VideoQCDimension(
+                **raw.get("brand_text_accuracy", {"score": 7, "reasoning": "Not evaluated"})
+            ),
             overall_verdict=raw.get("overall_verdict", ""),
         )
 
@@ -72,6 +78,8 @@ class QCService:
             and report.avatar_consistency.score >= threshold
             and report.product_consistency.score >= threshold
             and report.temporal_coherence.score >= threshold
+            and report.hand_body_integrity.score >= threshold
+            and report.brand_text_accuracy.score >= threshold
         )
 
     async def rewrite_prompt(self, original_prompt: str, qc_report: StoryboardQCReport) -> str:
@@ -95,38 +103,36 @@ class QCService:
 
     async def rewrite_video_prompt(self, original_prompt: str, qc_report: VideoQCReport) -> str:
         """Use Gemini to rewrite a video prompt based on QC feedback."""
-        feedback_parts: list[str] = []
-        feedback_parts.append(
+        feedback_parts: list[str] = [
             f"Technical distortion score: {qc_report.technical_distortion.score}/10 - "
-            f"{qc_report.technical_distortion.reasoning}"
-        )
-        feedback_parts.append(
+            f"{qc_report.technical_distortion.reasoning}",
             f"Cinematic imperfections score: {qc_report.cinematic_imperfections.score}/10 - "
-            f"{qc_report.cinematic_imperfections.reasoning}"
-        )
-        feedback_parts.append(
+            f"{qc_report.cinematic_imperfections.reasoning}",
             f"Avatar consistency score: {qc_report.avatar_consistency.score}/10 - "
-            f"{qc_report.avatar_consistency.reasoning}"
-        )
-        feedback_parts.append(
+            f"{qc_report.avatar_consistency.reasoning}",
             f"Product consistency score: {qc_report.product_consistency.score}/10 - "
-            f"{qc_report.product_consistency.reasoning}"
-        )
-        feedback_parts.append(
+            f"{qc_report.product_consistency.reasoning}",
             f"Temporal coherence score: {qc_report.temporal_coherence.score}/10 - "
-            f"{qc_report.temporal_coherence.reasoning}"
-        )
+            f"{qc_report.temporal_coherence.reasoning}",
+            f"Hand/body integrity score: {qc_report.hand_body_integrity.score}/10 - "
+            f"{qc_report.hand_body_integrity.reasoning}",
+            f"Brand/text accuracy score: {qc_report.brand_text_accuracy.score}/10 - "
+            f"{qc_report.brand_text_accuracy.reasoning}",
+        ]
         qc_feedback = "\n".join(feedback_parts)
         return await self.gemini.rewrite_prompt(original_prompt, qc_feedback)
 
     def select_best_video_variant(self, variants: list[VideoVariant]) -> int:
         """Select the best video variant using weighted scoring.
 
-        Weights:
-          avatar_consistency  * 0.35
-          product_consistency * 0.35
-          technical_distortion * 0.15
-          cinematic_imperfections * 0.15
+        Weights (sum to 1.0):
+          avatar_consistency       * 0.20
+          product_consistency      * 0.20
+          hand_body_integrity      * 0.15
+          brand_text_accuracy      * 0.15
+          temporal_coherence       * 0.10
+          technical_distortion     * 0.10
+          cinematic_imperfections  * 0.10
 
         Returns index of the best variant.
         """
@@ -138,10 +144,13 @@ class QCService:
                 continue
             r = variant.qc_report
             score = (
-                r.avatar_consistency.score * 0.35
-                + r.product_consistency.score * 0.35
-                + r.technical_distortion.score * 0.15
-                + r.cinematic_imperfections.score * 0.15
+                r.avatar_consistency.score * 0.20
+                + r.product_consistency.score * 0.20
+                + r.hand_body_integrity.score * 0.15
+                + r.brand_text_accuracy.score * 0.15
+                + r.temporal_coherence.score * 0.10
+                + r.technical_distortion.score * 0.10
+                + r.cinematic_imperfections.score * 0.10
             )
             if score > best_score:
                 best_score = score

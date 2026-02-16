@@ -222,7 +222,7 @@ and product in sharp focus, broadcast-quality advertising photography.\
 # Video generation (Veo)
 # ---------------------------------------------------------------------------
 
-VIDEO_PROMPT_TEMPLATE = """\
+VIDEO_PROMPT_TEMPLATE_REFERENCE = """\
 CHARACTER DESCRIPTION (maintain exactly across all scenes):
 {detailed_avatar_description}
 
@@ -230,6 +230,24 @@ SCENE DIRECTION:
 Setting: {visual_background}. Lighting: {lighting}. Shot: {shot_type}.
 The subject {avatar_action}, their expression conveying {avatar_emotion}. \
 {camera_movement}. {product_visual_integration}.
+
+DIALOGUE AND VOICE:
+The subject speaks in a {voice_style} voice: {script_dialogue}
+
+AUDIO:
+{sound_design}. {audio_continuity}
+
+Smooth, natural motion with broadcast-quality cinematography. \
+Photorealistic rendering, no text overlays, no watermarks.\
+"""
+
+VIDEO_PROMPT_TEMPLATE_IMAGE = """\
+Starting from the provided image, animate the following motion:
+
+The subject {avatar_action}, their expression conveying {avatar_emotion}. \
+{camera_movement}. {product_visual_integration}.
+
+Setting: {visual_background}. Lighting: {lighting}. Shot: {shot_type}.
 
 DIALOGUE AND VOICE:
 The subject speaks in a {voice_style} voice: {script_dialogue}
@@ -250,7 +268,9 @@ VIDEO_NEGATIVE_PROMPT = (
     "dutch angle, shaky camera, lip sync mismatch, audio desync, "
     "multiple people, crowd, extra person, "
     "morphing, warping, extra limbs, missing fingers, inconsistent lighting, "
-    "color shift, split screen, picture-in-picture"
+    "color shift, split screen, picture-in-picture, "
+    "competitor brand logos, brand name misspelling, text morphing, label distortion, "
+    "hand-product clipping, fingers through object, unnatural hand poses, extra digits on hands"
 )
 
 # ---------------------------------------------------------------------------
@@ -339,6 +359,12 @@ lip sync quality, body proportions
 or distortion, logo/text legibility
 5. TEMPORAL COHERENCE: Smooth motion, no sudden jumps, consistent physics, \
 natural transitions
+6. HAND_BODY_INTEGRITY: Correct finger count on both hands, natural hand \
+poses when holding product, proportional limbs, no clipping between hands \
+and objects, no extra or missing digits
+7. BRAND_TEXT_ACCURACY: Any on-screen text/labels remain stable and legible, \
+no competitor logos appear, product brand name spelled correctly if visible, \
+no text morphing or distortion across frames
 
 Return ONLY this JSON:
 {{
@@ -362,6 +388,14 @@ Return ONLY this JSON:
     "score": <0-10>,
     "reasoning": "Brief explanation"
   }},
+  "hand_body_integrity": {{
+    "score": <0-10>,
+    "reasoning": "Brief explanation"
+  }},
+  "brand_text_accuracy": {{
+    "score": <0-10>,
+    "reasoning": "Brief explanation"
+  }},
   "overall_verdict": "PASS or FAIL with brief summary"
 }}\
 """
@@ -371,8 +405,8 @@ Return ONLY this JSON:
 # ---------------------------------------------------------------------------
 
 PROMPT_REWRITE_TEMPLATE = """\
-The following image generation prompt produced a result that failed quality \
-control. Rewrite the prompt to fix the specific issues identified.
+The following prompt produced a result that failed quality control. \
+Rewrite the prompt to fix the specific issues identified.
 
 ORIGINAL PROMPT:
 {original_prompt}
@@ -386,6 +420,15 @@ INSTRUCTIONS:
 - Strengthen identity-preservation language for the avatar if avatar score was low
 - Strengthen product description language if product score was low
 - Improve compositional direction if composition score was low
+- If hand/body integrity scored low: add explicit hand pose directions \
+(e.g. "right hand grips product firmly with five fingers visible, left \
+hand rests naturally at side"), specify finger count, avoid ambiguous \
+grasping descriptions
+- If brand/text accuracy scored low: add "no on-screen text, no brand \
+logos other than the product's own label", reinforce product label \
+stability
+- If temporal coherence scored low: simplify motion instructions, reduce \
+camera movement complexity, add "continuous smooth motion"
 - Do NOT add JSON formatting — return only the improved prompt as plain text
 
 IMPROVED PROMPT:\

@@ -21,6 +21,7 @@ import {
   ToggleButton,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
+
 import {
   ArrowForward,
   AutoAwesome,
@@ -30,6 +31,8 @@ import {
 } from '@mui/icons-material';
 import type { AvatarVariant, AvatarGenerateOptions } from '../../types';
 import { uploadImage } from '../../api/pipeline';
+import { usePipelineStore } from '../../store/pipelineStore';
+import ModelBadge from '../common/ModelBadge';
 
 const ETHNICITIES = [
   '', 'South Asian', 'East Asian', 'Southeast Asian', 'Black', 'White',
@@ -38,12 +41,6 @@ const ETHNICITIES = [
 
 const AGE_RANGES = ['18-25', '25-35', '35-45', '45-55', '55+'];
 
-const IMAGE_MODELS = [
-  { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image', description: 'Default' },
-  { id: 'imagen-4.0-generate-001', label: 'Imagen 4 Standard', description: 'High quality' },
-  { id: 'imagen-4.0-fast-generate-001', label: 'Imagen 4 Fast', description: 'Faster generation' },
-  { id: 'imagen-4.0-ultra-generate-001', label: 'Imagen 4 Ultra', description: 'Best quality' },
-];
 
 interface AvatarGalleryProps {
   variants: AvatarVariant[];
@@ -64,8 +61,9 @@ export default function AvatarGallery({
   isLoading,
   readOnly = false,
 }: AvatarGalleryProps) {
+  const aspectRatio = usePipelineStore((s) => s.aspectRatio);
+  const [imageResolution, setImageResolution] = useState('2K');
   const [numVariants, setNumVariants] = useState(2);
-  const [imageModel, setImageModel] = useState('gemini-3-pro-image-preview');
   const [customPrompt, setCustomPrompt] = useState('');
   const [referenceImageUrl, setReferenceImageUrl] = useState('');
   const [uploadLoading, setUploadLoading] = useState(false);
@@ -91,7 +89,8 @@ export default function AvatarGallery({
   const handleGenerate = () => {
     const options: AvatarGenerateOptions = {
       num_variants: numVariants,
-      image_model: imageModel !== 'gemini-3-pro-image-preview' ? imageModel : undefined,
+      image_size: imageResolution,
+      aspect_ratio: usePipelineStore.getState().aspectRatio,
       custom_prompt: customPrompt || undefined,
       reference_image_url: referenceImageUrl || undefined,
       override_ethnicity: ethnicity || undefined,
@@ -105,9 +104,12 @@ export default function AvatarGallery({
 
   return (
     <Box sx={{ maxWidth: 900, mx: 'auto' }}>
-      <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
-        {hasVariants ? 'Select Avatar' : 'Generate Avatar'}
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+        <Typography variant="h5" sx={{ fontWeight: 600 }}>
+          {hasVariants ? 'Select Avatar' : 'Generate Avatar'}
+        </Typography>
+        <ModelBadge />
+      </Box>
 
       {/* Avatar Generation Controls — always visible when not readOnly */}
       {!readOnly && (
@@ -118,13 +120,41 @@ export default function AvatarGallery({
             gap: 2.5,
             p: 3,
             mb: 3,
-            border: '1px solid #DADCE0',
+            border: '1px solid',
+            borderColor: 'divider',
             borderRadius: 2,
-            bgcolor: '#F8F9FA',
+            bgcolor: 'background.default',
           }}
         >
           {/* Character filters row */}
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            {/* Aspect Ratio toggle */}
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                Aspect Ratio
+              </Typography>
+              <ToggleButtonGroup
+                value={aspectRatio}
+                exclusive
+                onChange={(_, v) => { if (v !== null) usePipelineStore.getState().setAspectRatio(v); }}
+                size="small"
+                disabled={isLoading}
+              >
+                <ToggleButton value="9:16" sx={{ px: 1.5, textTransform: 'none', lineHeight: 1.2 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <span>9:16</span>
+                    <Typography variant="caption" sx={{ fontSize: 9, opacity: 0.7 }}>Reels / Shorts</Typography>
+                  </Box>
+                </ToggleButton>
+                <ToggleButton value="16:9" sx={{ px: 1.5, textTransform: 'none', lineHeight: 1.2 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <span>16:9</span>
+                    <Typography variant="caption" sx={{ fontSize: 9, opacity: 0.7 }}>YouTube / Web</Typography>
+                  </Box>
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+
             {/* Gender toggle */}
             <Box>
               <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
@@ -195,22 +225,23 @@ export default function AvatarGallery({
               />
             </Box>
 
-            {/* Model selector */}
-            <FormControl size="small" sx={{ minWidth: 260 }}>
-              <InputLabel>Image Model</InputLabel>
-              <Select
-                value={imageModel}
-                label="Image Model"
-                onChange={(e: SelectChangeEvent) => setImageModel(e.target.value)}
+            {/* Avatar Resolution */}
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                Avatar Resolution
+              </Typography>
+              <ToggleButtonGroup
+                value={imageResolution}
+                exclusive
+                onChange={(_, v) => { if (v !== null) setImageResolution(v); }}
+                size="small"
                 disabled={isLoading}
               >
-                {IMAGE_MODELS.map((m) => (
-                  <MenuItem key={m.id} value={m.id}>
-                    {m.label} — {m.description}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+                <ToggleButton value="1K" sx={{ px: 1.5, textTransform: 'none' }}>1K</ToggleButton>
+                <ToggleButton value="2K" sx={{ px: 1.5, textTransform: 'none' }}>2K</ToggleButton>
+                <ToggleButton value="4K" sx={{ px: 1.5, textTransform: 'none' }}>4K</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
           </Box>
 
           {/* Custom prompt */}
@@ -258,7 +289,8 @@ export default function AvatarGallery({
                   height: 48,
                   objectFit: 'cover',
                   borderRadius: 1,
-                  border: '1px solid #DADCE0',
+                  border: '1px solid',
+                  borderColor: 'divider',
                 }}
               />
             )}
@@ -310,12 +342,15 @@ export default function AvatarGallery({
                     cursor: readOnly ? 'default' : 'pointer',
                     position: 'relative',
                     border: selectedIndex === variant.index
-                      ? '3px solid #1A73E8'
-                      : '1px solid #DADCE0',
+                      ? '3px solid'
+                      : '1px solid',
+                    borderColor: selectedIndex === variant.index
+                      ? 'primary.main'
+                      : 'divider',
                     transition: 'border-color 0.2s, transform 0.2s ease',
                     '&:hover': {
                       transform: 'translateY(-2px) scale(1.02)',
-                      borderColor: selectedIndex === variant.index ? '#1A73E8' : '#9AA0A6',
+                      borderColor: selectedIndex === variant.index ? 'primary.main' : 'text.secondary',
                     },
                     '&:hover .avatar-zoom-btn': { opacity: 1 },
                   }}
@@ -327,7 +362,7 @@ export default function AvatarGallery({
                     sx={{
                       aspectRatio: '3 / 4',
                       objectFit: 'contain',
-                      bgcolor: '#F0F0F0',
+                      bgcolor: 'action.hover',
                     }}
                   />
                   {/* Zoom button — visible on hover */}
@@ -342,10 +377,10 @@ export default function AvatarGallery({
                       position: 'absolute',
                       top: 8,
                       right: 8,
-                      bgcolor: 'rgba(255,255,255,0.85)',
+                      bgcolor: 'background.paper',
                       opacity: 0,
                       transition: 'opacity 0.2s',
-                      '&:hover': { bgcolor: 'rgba(255,255,255,1)' },
+                      '&:hover': { bgcolor: 'background.paper' },
                     }}
                   >
                     <ZoomIn fontSize="small" />
@@ -394,7 +429,7 @@ export default function AvatarGallery({
         maxWidth="md"
         slotProps={{
           paper: {
-            sx: { bgcolor: '#1a1a1a', position: 'relative', overflow: 'hidden' },
+            sx: { bgcolor: 'common.black', position: 'relative', overflow: 'hidden' },
           },
         }}
       >

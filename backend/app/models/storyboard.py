@@ -9,6 +9,7 @@ class StoryboardRequest(BaseModel):
     scenes: list[Scene]
     image_model: str | None = None
     aspect_ratio: str = "9:16"
+    image_size: str = "2K"
     qc_threshold: int = Field(default=60, ge=0, le=100)
     max_regen_attempts: int = Field(default=3, ge=0, le=10)
     include_composition_qc: bool = True
@@ -35,6 +36,7 @@ class StoryboardRegenRequest(BaseModel):
     scene: Scene
     image_model: str | None = None
     aspect_ratio: str = "9:16"
+    image_size: str = "2K"
     qc_threshold: int = Field(default=60, ge=0, le=100)
     max_regen_attempts: int = Field(default=3, ge=0, le=10)
     include_composition_qc: bool = True

@@ -18,17 +18,14 @@ import {
   Tooltip,
   Skeleton,
   Dialog,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Collapse,
 } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material';
 import { ArrowForward, Refresh, ZoomIn, Close, ExpandMore, ExpandLess } from '@mui/icons-material';
 import QCBadge from '../qc/QCBadge';
 import QCDetailPanel from '../qc/QCDetailPanel';
 import type { StoryboardResult, StoryboardGenerateOptions } from '../../types';
+import { usePipelineStore } from '../../store/pipelineStore';
+import ModelBadge from '../common/ModelBadge';
 
 interface StoryboardGridProps {
   results: StoryboardResult[];
@@ -37,22 +34,9 @@ interface StoryboardGridProps {
   onRegenScene: (sceneNumber: number, options?: Omit<StoryboardGenerateOptions, 'custom_prompts'> & { custom_prompt?: string }) => void;
   isLoading: boolean;
   readOnly?: boolean;
+  totalScenes?: number;
 }
 
-const ASPECT_RATIOS = [
-  { value: '9:16', hint: 'Reels / Shorts' },
-  { value: '16:9', hint: 'YouTube / Web' },
-  { value: '1:1', hint: 'Instagram Feed' },
-  { value: '3:4', hint: 'Pinterest / Portrait' },
-  { value: '4:3', hint: 'Presentation' },
-];
-
-const IMAGE_MODELS = [
-  { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image', description: 'Default' },
-  { id: 'imagen-4.0-generate-001', label: 'Imagen 4 Standard', description: 'High quality' },
-  { id: 'imagen-4.0-fast-generate-001', label: 'Imagen 4 Fast', description: 'Faster generation' },
-  { id: 'imagen-4.0-ultra-generate-001', label: 'Imagen 4 Ultra', description: 'Best quality' },
-];
 
 export default function StoryboardGrid({
   results,
@@ -61,9 +45,10 @@ export default function StoryboardGrid({
   onRegenScene,
   isLoading,
   readOnly = false,
+  totalScenes,
 }: StoryboardGridProps) {
-  const [aspectRatio, setAspectRatio] = useState('9:16');
-  const [imageModel, setImageModel] = useState('gemini-3-pro-image-preview');
+  const aspectRatio = usePipelineStore((s) => s.aspectRatio);
+  const [imageResolution, setImageResolution] = useState('2K');
   const [qcThreshold, setQcThreshold] = useState(60);
   const [maxRegenAttempts, setMaxRegenAttempts] = useState(3);
   const [includeCompositionQc, setIncludeCompositionQc] = useState(true);
@@ -89,8 +74,8 @@ export default function StoryboardGrid({
       : 0;
 
   const buildOptions = (): StoryboardGenerateOptions => ({
-    aspect_ratio: aspectRatio,
-    image_model: imageModel !== 'gemini-3-pro-image-preview' ? imageModel : undefined,
+    aspect_ratio: usePipelineStore.getState().aspectRatio,
+    image_size: imageResolution,
     qc_threshold: qcThreshold,
     max_regen_attempts: maxRegenAttempts,
     include_composition_qc: includeCompositionQc,
@@ -110,9 +95,12 @@ export default function StoryboardGrid({
     <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h5" sx={{ fontWeight: 600 }}>
-          Storyboard
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+            Storyboard
+          </Typography>
+          <ModelBadge />
+        </Box>
         {hasResults && (
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Chip label={`${results.length} scenes`} variant="outlined" />
@@ -131,50 +119,37 @@ export default function StoryboardGrid({
             gap: 2.5,
             p: 3,
             mb: 3,
-            border: '1px solid #DADCE0',
+            border: '1px solid',
+            borderColor: 'divider',
             borderRadius: 2,
-            bgcolor: '#F8F9FA',
+            bgcolor: 'background.default',
           }}
         >
-          {/* Row 1: Aspect ratio + Image model */}
+          {/* Row 1: Aspect ratio chip + Image model + Storyboard Resolution */}
           <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <Chip
+              label={`Aspect Ratio: ${aspectRatio} (${aspectRatio === '16:9' ? 'YouTube / Web' : 'Reels / Shorts'})`}
+              variant="outlined"
+              sx={{ alignSelf: 'center' }}
+            />
+
+            {/* Storyboard Resolution */}
             <Box>
               <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
-                Aspect Ratio
+                Storyboard Resolution
               </Typography>
               <ToggleButtonGroup
-                value={aspectRatio}
+                value={imageResolution}
                 exclusive
-                onChange={(_, v) => { if (v !== null) setAspectRatio(v); }}
+                onChange={(_, v) => { if (v !== null) setImageResolution(v); }}
                 size="small"
                 disabled={isLoading}
               >
-                {ASPECT_RATIOS.map((ratio) => (
-                  <ToggleButton key={ratio.value} value={ratio.value} sx={{ px: 1.5, textTransform: 'none', lineHeight: 1.2 }}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <span>{ratio.value}</span>
-                      <Typography variant="caption" sx={{ fontSize: 9, opacity: 0.7 }}>{ratio.hint}</Typography>
-                    </Box>
-                  </ToggleButton>
-                ))}
+                <ToggleButton value="1K" sx={{ px: 1.5, textTransform: 'none' }}>1K</ToggleButton>
+                <ToggleButton value="2K" sx={{ px: 1.5, textTransform: 'none' }}>2K</ToggleButton>
+                <ToggleButton value="4K" sx={{ px: 1.5, textTransform: 'none' }}>4K</ToggleButton>
               </ToggleButtonGroup>
             </Box>
-
-            <FormControl size="small" sx={{ minWidth: 260 }}>
-              <InputLabel>Image Model</InputLabel>
-              <Select
-                value={imageModel}
-                label="Image Model"
-                onChange={(e: SelectChangeEvent) => setImageModel(e.target.value)}
-                disabled={isLoading}
-              >
-                {IMAGE_MODELS.map((m) => (
-                  <MenuItem key={m.id} value={m.id}>
-                    {m.label} — {m.description}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
           </Box>
 
           {/* Row 2: QC threshold + Max regen attempts */}
@@ -242,11 +217,11 @@ export default function StoryboardGrid({
         </Box>
       )}
 
-      {/* Skeleton loading state */}
+      {/* Skeleton loading state — pure skeletons when no results yet */}
       {isLoading && !hasResults && (
         <Grid container spacing={3}>
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i}>
+          {Array.from({ length: totalScenes || 3 }).map((_, i) => (
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={`skeleton-${i}`}>
               <Card>
                 <Skeleton variant="rectangular" height={220} />
                 <CardContent sx={{ pb: 1 }}>
@@ -278,17 +253,18 @@ export default function StoryboardGrid({
         </Box>
       )}
 
-      {/* Results grid */}
+      {/* Results grid (including progressive loading with skeletons) */}
       {hasResults && (
         <>
           <Grid container spacing={3}>
             {results.map((result, index) => (
               <Grid size={{ xs: 12, sm: 6, md: 4 }} key={result.scene_number}>
+
                 <Card sx={{
                   animation: `fadeInUp 0.4s ease ${index * 0.1}s both`,
                   '&:hover .scene-zoom-btn': { opacity: 1 },
                 }}>
-                  <Box sx={{ position: 'relative', bgcolor: '#F0F0F0' }}>
+                  <Box sx={{ position: 'relative', bgcolor: 'action.hover' }}>
                     <CardMedia
                       component="img"
                       height={220}
@@ -304,7 +280,7 @@ export default function StoryboardGrid({
                         top: 8,
                         left: 8,
                         backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                        color: '#FFFFFF',
+                        color: 'common.white',
                         fontWeight: 500,
                       }}
                     />
@@ -324,7 +300,7 @@ export default function StoryboardGrid({
                           size="small"
                           sx={{
                             backgroundColor: 'rgba(232, 113, 10, 0.85)',
-                            color: '#FFFFFF',
+                            color: 'common.white',
                             fontSize: 11,
                           }}
                         />
@@ -335,10 +311,10 @@ export default function StoryboardGrid({
                           size="small"
                           onClick={() => setPreviewUrl(result.image_path)}
                           sx={{
-                            bgcolor: 'rgba(255, 255, 255, 0.85)',
+                            bgcolor: 'background.paper',
                             opacity: 0,
                             transition: 'opacity 0.2s',
-                            '&:hover': { bgcolor: 'rgba(255, 255, 255, 1)' },
+                            '&:hover': { bgcolor: 'background.paper' },
                           }}
                         >
                           <ZoomIn fontSize="small" />
@@ -351,8 +327,8 @@ export default function StoryboardGrid({
                             onClick={() => handleRegenScene(result.scene_number)}
                             disabled={isLoading}
                             sx={{
-                              bgcolor: 'rgba(255, 255, 255, 0.85)',
-                              '&:hover': { bgcolor: 'rgba(255, 255, 255, 1)' },
+                              bgcolor: 'background.paper',
+                              '&:hover': { bgcolor: 'background.paper' },
                             }}
                           >
                             <Refresh fontSize="small" />
@@ -408,7 +384,7 @@ export default function StoryboardGrid({
                               display: 'block',
                               mt: 0.5,
                               p: 1,
-                              bgcolor: '#F5F5F5',
+                              bgcolor: 'action.hover',
                               borderRadius: 1,
                               fontFamily: 'monospace',
                               fontSize: 11,
@@ -442,6 +418,24 @@ export default function StoryboardGrid({
                 </Card>
               </Grid>
             ))}
+            {/* Skeleton placeholders for remaining scenes during progressive loading */}
+            {isLoading && totalScenes && results.length < totalScenes &&
+              Array.from({ length: totalScenes - results.length }).map((_, i) => (
+                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={`pending-${i}`}>
+                  <Card>
+                    <Skeleton variant="rectangular" height={220} />
+                    <CardContent sx={{ pb: 1 }}>
+                      <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                        <Skeleton variant="rounded" width={80} height={24} />
+                        <Skeleton variant="rounded" width={80} height={24} />
+                      </Box>
+                      <Skeleton variant="text" width="60%" />
+                      <Skeleton variant="text" width="40%" />
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))
+            }
           </Grid>
 
           <Button
@@ -464,7 +458,7 @@ export default function StoryboardGrid({
         maxWidth="md"
         slotProps={{
           paper: {
-            sx: { bgcolor: '#1a1a1a', position: 'relative', overflow: 'hidden' },
+            sx: { bgcolor: 'common.black', position: 'relative', overflow: 'hidden' },
           },
         }}
       >

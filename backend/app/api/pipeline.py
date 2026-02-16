@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from app.dependencies import (
     get_avatar_service,
+    get_broadcaster,
     get_job_store,
     get_pipeline_service,
     get_script_service,
@@ -13,9 +14,11 @@ from app.dependencies import (
     get_task_runner,
     get_video_service,
 )
+from app.jobs.events import SSEBroadcaster
 from app.jobs.runner import TaskRunner
 from app.jobs.store import JobStore
 from app.models.job import JobStatus
+from app.models.sse import SSEEventType
 from app.models.avatar import (
     AvatarRequest,
     AvatarResponse,
@@ -124,6 +127,8 @@ async def generate_avatars(
             image_model=request.image_model,
             custom_prompt=request.custom_prompt,
             reference_image_url=request.reference_image_url,
+            aspect_ratio=request.aspect_ratio,
+            image_size=request.image_size,
         )
         if job_store.get_job(request.run_id):
             job_store.update_job(request.run_id, avatar_variants=response.variants)
@@ -170,18 +175,25 @@ async def generate_storyboard(
     request: StoryboardRequest,
     storyboard_svc: StoryboardService = Depends(get_storyboard_service),
     job_store: JobStore = Depends(get_job_store),
+    broadcaster: SSEBroadcaster = Depends(get_broadcaster),
 ) -> StoryboardResponse:
     """Generate storyboard with QC feedback loop."""
     try:
+        def on_progress(data: dict) -> None:
+            if data.get("event") == "scene_completed":
+                broadcaster.emit(request.run_id, SSEEventType.SCENE_PROGRESS, data)
+
         response = await storyboard_svc.generate_storyboard(
             run_id=request.run_id,
             scenes=request.scenes,
+            on_progress=on_progress,
             image_model=request.image_model,
             aspect_ratio=request.aspect_ratio,
             qc_threshold=request.qc_threshold,
             max_regen_attempts=request.max_regen_attempts,
             include_composition_qc=request.include_composition_qc,
             custom_prompts=request.custom_prompts,
+            image_size=request.image_size,
         )
         if job_store.get_job(request.run_id):
             job_store.update_job(request.run_id, storyboard_results=response.results)
@@ -210,6 +222,7 @@ async def regen_storyboard_scene(
             max_regen_attempts=request.max_regen_attempts,
             include_composition_qc=request.include_composition_qc,
             custom_prompt=request.custom_prompt or None,
+            image_size=request.image_size,
         )
         # Update the specific scene in the job's storyboard results
         job = job_store.get_job(request.run_id)
@@ -232,14 +245,20 @@ async def generate_video(
     request: VideoRequest,
     video_svc: VideoService = Depends(get_video_service),
     job_store: JobStore = Depends(get_job_store),
+    broadcaster: SSEBroadcaster = Depends(get_broadcaster),
 ) -> VideoResponse:
     """Generate video variants with QC and auto-selection."""
     try:
+        def on_progress(data: dict) -> None:
+            if data.get("event") == "video_completed":
+                broadcaster.emit(request.run_id, SSEEventType.SCENE_PROGRESS, data)
+
         response = await video_svc.generate_videos(
             run_id=request.run_id,
             scenes_data=request.scenes_data,
             script_scenes=request.script_scenes,
             avatar_profile=request.avatar_profile,
+            on_progress=on_progress,
             seed=request.seed,
             resolution=request.resolution,
             veo_model=request.veo_model,
@@ -251,6 +270,7 @@ async def generate_video(
             max_qc_regen_attempts=request.max_qc_regen_attempts,
             use_reference_images=request.use_reference_images,
             negative_prompt_extra=request.negative_prompt_extra,
+            generate_audio=request.generate_audio,
         )
         if job_store.get_job(request.run_id):
             job_store.update_job(request.run_id, video_results=response.results)
@@ -286,6 +306,7 @@ async def regen_video_scene(
             max_qc_regen_attempts=request.max_qc_regen_attempts,
             use_reference_images=request.use_reference_images,
             negative_prompt_extra=request.negative_prompt_extra,
+            generate_audio=request.generate_audio,
         )
         # Update the specific scene in the job's video results
         job = job_store.get_job(request.run_id)

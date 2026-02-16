@@ -27,8 +27,11 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Imagen 4 + Veo 3
 - Veo outputs VFR video — always preprocess to 24fps CFR before stitching
 - QC feedback loop: generate → QC score → rewrite prompt → regenerate (max 3 attempts)
 - SSE events: add to `SSEEventType` enum + backend `broadcaster.emit()` + frontend `useSSE` handler
+- SSE progressive loading: interactive mode uses SSE side-channel (`openSceneProgressSSE` in `usePipeline.ts`) alongside POST for incremental scene rendering
+- SSE named events require `addEventListener('scene_progress', handler)` — `onmessage` only fires for unnamed events
 - `image_url` accepts local `/output/...` paths — services detect prefix and read from disk
-- Video duration = user-selectable 4/6/8s (8s required with reference images or high resolution)
+- Video duration = user-selectable 4/6/8s (8s auto-enforced when reference images or resolution ≥ 1080p)
+- `generate_audio` toggle: configurable via VideoPlayer Switch (default True), flows through entire backend chain
 - File uploads: use `api.upload()` with FormData — `api.post()` is for JSON only
 - `detailed_avatar_description` must be identical across all scenes for Veo consistency
 - Same Veo `seed` across all scenes for character/voice consistency
@@ -41,12 +44,14 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Imagen 4 + Veo 3
 - Every prompt template field must be wired end-to-end: model field → service → template `.format()` — no phantom fields
 - Avatar demographic overrides (`override_gender`, `override_ethnicity`, `override_age_range`) replace `visual_description` with generic text to avoid conflicting prompt instructions
 - Append `?t={timestamp}` cache-buster to image paths on regeneration so browsers show fresh images
+- `ModelBadge` component (`components/common/ModelBadge.tsx`): "Nano Banana Pro" shimmer badge shown on Avatar + Storyboard screens
 
 ## Navigation Pattern (Optimistic)
 
 - **Input → Script**: `startPipeline` sets `activeStep=1` immediately, then calls API. ScriptEditor handles `script: null` with skeleton loading. On error, navigates back to step 0.
 - **Script → Avatar**: `navigateToAvatarStep` sets `activeStep=2` without generating. AvatarGallery shows controls first (model, variants, prompt), user clicks "Generate Avatars" explicitly.
-- **Avatar → Storyboard**: `confirmAvatarSelection` selects avatar + auto-generates storyboard on step 3.
+- **Avatar → Storyboard**: `confirmAvatarSelection` selects avatar, navigates to step 3. User clicks Generate.
+- **Progressive loading**: Storyboard + Video steps stream results via SSE side-channel; components show completed scenes + skeleton placeholders (`totalScenes` prop).
 - Never pass `onClick={asyncFn}` directly — wrap as `onClick={() => asyncFn()}` to prevent MouseEvent leaking as function arguments.
 - All hooks must be declared before any early return in a component (React hooks ordering rule).
 - Stepper spinner shows on `activeStep` (not `maxStep`) — see `MainLayout.tsx`.

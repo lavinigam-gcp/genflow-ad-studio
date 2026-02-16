@@ -10,7 +10,6 @@ import {
   CircularProgress,
   Box,
   Chip,
-  Collapse,
   ToggleButtonGroup,
   ToggleButton,
   IconButton,
@@ -27,18 +26,14 @@ import type { SelectChangeEvent } from '@mui/material';
 import {
   AutoAwesome,
   Inventory2,
-  ExpandMore,
-  ExpandLess,
   ChevronLeft,
   ChevronRight,
   CloudUpload,
   Link as LinkIcon,
   Image as ImageIcon,
   AutoFixHigh,
-  Casino,
 } from '@mui/icons-material';
 import type { ScriptRequest, SampleProduct, GeminiModelOption } from '../../types';
-import { usePipelineStore } from '../../store/pipelineStore';
 import {
   listSamples,
   uploadImage,
@@ -50,6 +45,7 @@ interface ProductFormProps {
   onSubmit: (request: ScriptRequest) => Promise<void>;
   isLoading: boolean;
   readOnly?: boolean;
+  initialRequest?: ScriptRequest | null;
 }
 
 const AD_TONES = ['energetic', 'sophisticated', 'playful', 'authoritative', 'warm'];
@@ -61,7 +57,7 @@ const GEMINI_MODELS: GeminiModelOption[] = [
   { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Fastest' },
 ];
 
-export default function ProductForm({ onSubmit, isLoading, readOnly = false }: ProductFormProps) {
+export default function ProductForm({ onSubmit, isLoading, readOnly = false, initialRequest }: ProductFormProps) {
   const [formData, setFormData] = useState<ScriptRequest>({
     product_name: '',
     specifications: '',
@@ -71,7 +67,6 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false }: P
     gemini_model: 'gemini-3-flash-preview',
   });
   const [selectedSample, setSelectedSample] = useState<string | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [scrollOffset, setScrollOffset] = useState(0);
 
   // Sample products loaded from API
@@ -91,6 +86,16 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false }: P
 
   const visibleCount = 3;
   const maxOffset = Math.max(0, samples.length - visibleCount);
+
+  // Populate form from initialRequest (resume flow)
+  useEffect(() => {
+    if (initialRequest) {
+      setFormData(initialRequest);
+      if (initialRequest.image_url) {
+        setImagePreview(initialRequest.image_url);
+      }
+    }
+  }, [initialRequest]);
 
   // Load samples on mount
   useEffect(() => {
@@ -348,18 +353,6 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false }: P
           </Typography>
         </Box>
 
-        {/* Model chip — always visible, expands Advanced Options on click */}
-        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
-          <Chip
-            icon={<AutoAwesome />}
-            label={GEMINI_MODELS.find((m) => m.id === formData.gemini_model)?.label ?? 'Gemini 3 Flash'}
-            variant="outlined"
-            size="small"
-            onClick={() => setShowAdvanced(true)}
-            sx={{ cursor: 'pointer' }}
-          />
-        </Box>
-
         {/* Image input section with tabs */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
@@ -532,149 +525,6 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false }: P
           )}
         </Box>
 
-        {/* Advanced Options */}
-        <Box sx={{ mb: 2 }}>
-          <Button
-            size="small"
-            onClick={() => setShowAdvanced((v) => !v)}
-            endIcon={showAdvanced ? <ExpandLess /> : <ExpandMore />}
-            sx={{ textTransform: 'none', color: 'text.secondary' }}
-          >
-            Advanced Options
-          </Button>
-          <Collapse in={showAdvanced}>
-            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2.5, pl: 1 }}>
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                  Ad Tone
-                </Typography>
-                <ToggleButtonGroup
-                  value={formData.ad_tone ?? 'energetic'}
-                  exclusive
-                  onChange={(_, value) => {
-                    if (value) setFormData((prev) => ({ ...prev, ad_tone: value }));
-                  }}
-                  size="small"
-                  disabled={isLoading || readOnly}
-                >
-                  {AD_TONES.map((tone) => (
-                    <ToggleButton
-                      key={tone}
-                      value={tone}
-                      sx={{
-                        textTransform: 'capitalize',
-                        px: 2,
-                        '&.Mui-selected': {
-                          backgroundColor: '#1A73E8',
-                          color: '#FFFFFF',
-                          '&:hover': { backgroundColor: '#1558B0' },
-                        },
-                      }}
-                    >
-                      {tone}
-                    </ToggleButton>
-                  ))}
-                </ToggleButtonGroup>
-              </Box>
-              <FormControl size="small" sx={{ maxWidth: 320 }}>
-                <InputLabel>Gemini Model</InputLabel>
-                <Select
-                  value={formData.gemini_model ?? 'gemini-3-flash-preview'}
-                  label="Gemini Model"
-                  onChange={(e: SelectChangeEvent) =>
-                    setFormData((prev) => ({ ...prev, gemini_model: e.target.value }))
-                  }
-                  disabled={isLoading || readOnly}
-                >
-                  {GEMINI_MODELS.map((model) => (
-                    <MenuItem key={model.id} value={model.id}>
-                      {model.label} — {model.description}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <Box sx={{ maxWidth: 320 }}>
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                  Max Dialogue Words / Scene: {formData.max_dialogue_words_per_scene ?? 25}
-                </Typography>
-                <Slider
-                  value={formData.max_dialogue_words_per_scene ?? 25}
-                  onChange={(_, value) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      max_dialogue_words_per_scene: value as number,
-                    }))
-                  }
-                  min={10}
-                  max={50}
-                  step={5}
-                  marks
-                  valueLabelDisplay="auto"
-                  disabled={isLoading || readOnly}
-                />
-              </Box>
-              <TextField
-                label="Custom Instructions (optional)"
-                value={formData.custom_instructions || ''}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, custom_instructions: e.target.value }))
-                }
-                fullWidth
-                multiline
-                rows={3}
-                disabled={isLoading || readOnly}
-                placeholder="e.g. Focus on sustainability features, use humor, target Gen-Z audience..."
-                helperText="Additional creative direction for the AI script writer"
-              />
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>
-                Veo Video Settings
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
-                <TextField
-                  label="Veo Seed"
-                  type="number"
-                  size="small"
-                  value={usePipelineStore.getState().veoSeed ?? ''}
-                  onChange={(e) => {
-                    const val = e.target.value ? parseInt(e.target.value, 10) : null;
-                    usePipelineStore.getState().setVeoSeed(val);
-                  }}
-                  disabled={isLoading || readOnly}
-                  placeholder="Auto"
-                  helperText="Same seed = consistent character across scenes"
-                  sx={{ maxWidth: 200 }}
-                />
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    const seed = Math.floor(Math.random() * 2147483647);
-                    usePipelineStore.getState().setVeoSeed(seed);
-                  }}
-                  disabled={isLoading || readOnly}
-                  title="Generate random seed"
-                  sx={{ mb: 3 }}
-                >
-                  <Casino />
-                </IconButton>
-                <FormControl size="small" sx={{ minWidth: 140 }}>
-                  <InputLabel>Resolution</InputLabel>
-                  <Select
-                    value={usePipelineStore.getState().veoResolution}
-                    label="Resolution"
-                    onChange={(e: SelectChangeEvent) =>
-                      usePipelineStore.getState().setVeoResolution(e.target.value)
-                    }
-                    disabled={isLoading || readOnly}
-                  >
-                    <MenuItem value="720p">720p</MenuItem>
-                    <MenuItem value="1080p">1080p</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-            </Box>
-          </Collapse>
-        </Box>
-
         {/* Form fields */}
         <Box
           component="form"
@@ -699,6 +549,93 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false }: P
             multiline
             rows={6}
             disabled={isLoading || readOnly}
+          />
+
+          {/* Generation settings */}
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+              Ad Tone
+            </Typography>
+            <ToggleButtonGroup
+              value={formData.ad_tone ?? 'energetic'}
+              exclusive
+              onChange={(_, value) => {
+                if (value) setFormData((prev) => ({ ...prev, ad_tone: value }));
+              }}
+              size="small"
+              disabled={isLoading || readOnly}
+            >
+              {AD_TONES.map((tone) => (
+                <ToggleButton
+                  key={tone}
+                  value={tone}
+                  sx={{
+                    textTransform: 'capitalize',
+                    px: 2,
+                    '&.Mui-selected': {
+                      backgroundColor: 'primary.main',
+                      color: 'primary.contrastText',
+                      '&:hover': { backgroundColor: 'primary.dark' },
+                    },
+                  }}
+                >
+                  {tone}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </Box>
+
+          <FormControl size="small" sx={{ maxWidth: 320 }}>
+            <InputLabel>Gemini Model</InputLabel>
+            <Select
+              value={formData.gemini_model ?? 'gemini-3-flash-preview'}
+              label="Gemini Model"
+              onChange={(e: SelectChangeEvent) =>
+                setFormData((prev) => ({ ...prev, gemini_model: e.target.value }))
+              }
+              disabled={isLoading || readOnly}
+            >
+              {GEMINI_MODELS.map((model) => (
+                <MenuItem key={model.id} value={model.id}>
+                  {model.label} — {model.description}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <Box sx={{ maxWidth: 320 }}>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+              Max Dialogue Words / Scene: {formData.max_dialogue_words_per_scene ?? 15}
+            </Typography>
+            <Slider
+              value={formData.max_dialogue_words_per_scene ?? 15}
+              onChange={(_, value) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  max_dialogue_words_per_scene: value as number,
+                }))
+              }
+              min={10}
+              max={50}
+              step={5}
+              marks
+              valueLabelDisplay="auto"
+              disabled={isLoading || readOnly}
+            />
+          </Box>
+
+          <TextField
+            label="Custom Instructions (optional)"
+            value={formData.custom_instructions || ''}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, custom_instructions: e.target.value }))
+            }
+            fullWidth
+            multiline
+            rows={3}
+            disabled={isLoading || readOnly}
+            placeholder="e.g. Focus on sustainability features, use humor, target Gen-Z audience..."
+            helperText="Additional creative direction for the AI script writer"
           />
 
           <Button

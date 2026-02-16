@@ -17,9 +17,10 @@ class VideoRequest(BaseModel):
     num_variants: int = Field(default=4, ge=1, le=4)
     compression_quality: str = "optimized"
     qc_threshold: int = Field(default=6, ge=0, le=10)
-    max_qc_regen_attempts: int = Field(default=0, ge=0, le=3)
+    max_qc_regen_attempts: int = Field(default=2, ge=0, le=3)
     use_reference_images: bool = True
     negative_prompt_extra: str = ""
+    generate_audio: bool = True
 
 
 class VideoQCDimension(BaseModel):
@@ -33,6 +34,8 @@ class VideoQCReport(BaseModel):
     avatar_consistency: VideoQCDimension
     product_consistency: VideoQCDimension
     temporal_coherence: VideoQCDimension
+    hand_body_integrity: VideoQCDimension
+    brand_text_accuracy: VideoQCDimension
     overall_verdict: str
 
 
@@ -65,9 +68,10 @@ class VideoRegenRequest(BaseModel):
     num_variants: int = Field(default=4, ge=1, le=4)
     compression_quality: str = "optimized"
     qc_threshold: int = Field(default=6, ge=0, le=10)
-    max_qc_regen_attempts: int = Field(default=0, ge=0, le=3)
+    max_qc_regen_attempts: int = Field(default=2, ge=0, le=3)
     use_reference_images: bool = True
     negative_prompt_extra: str = ""
+    generate_audio: bool = True
 
 
 class VideoSelectRequest(BaseModel):

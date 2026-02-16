@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type {
   Job,
+  ScriptRequest,
   VideoScript,
   AvatarVariant,
   StoryboardResult,
@@ -11,6 +12,7 @@ import type {
 interface PipelineState {
   activeStep: number;
   runId: string | null;
+  originalRequest: ScriptRequest | null;
   script: VideoScript | null;
   avatarVariants: AvatarVariant[];
   selectedAvatarIndex: number | null;
@@ -22,6 +24,7 @@ interface PipelineState {
   error: string | null;
   veoSeed: number | null;
   veoResolution: string;
+  aspectRatio: string;
 
   setStep: (step: number) => void;
   setRunId: (runId: string) => void;
@@ -33,12 +36,15 @@ interface PipelineState {
   selectVideoVariant: (sceneNumber: number, variantIndex: number, selectedPath: string) => void;
   updateStoryboardScene: (sceneNumber: number, result: StoryboardResult) => void;
   updateVideoScene: (sceneNumber: number, result: VideoResult) => void;
+  addOrUpdateStoryboardScene: (result: StoryboardResult) => void;
+  addOrUpdateVideoScene: (result: VideoResult) => void;
   setFinalVideo: (path: string) => void;
   addLog: (message: string, level: LogEntry['level']) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setVeoSeed: (seed: number | null) => void;
   setVeoResolution: (resolution: string) => void;
+  setAspectRatio: (ratio: string) => void;
   loadJob: (job: Job) => void;
   reset: () => void;
 }
@@ -46,6 +52,7 @@ interface PipelineState {
 const initialState = {
   activeStep: 0,
   runId: null,
+  originalRequest: null as ScriptRequest | null,
   script: null,
   avatarVariants: [],
   selectedAvatarIndex: null,
@@ -57,6 +64,7 @@ const initialState = {
   error: null,
   veoSeed: null as number | null,
   veoResolution: '720p',
+  aspectRatio: '9:16',
 };
 
 export const usePipelineStore = create<PipelineState>((set) => ({
@@ -99,6 +107,38 @@ export const usePipelineStore = create<PipelineState>((set) => ({
       ),
     })),
 
+  addOrUpdateStoryboardScene: (result) =>
+    set((state) => {
+      const exists = state.storyboardResults.some(
+        (r) => r.scene_number === result.scene_number,
+      );
+      return {
+        storyboardResults: exists
+          ? state.storyboardResults.map((r) =>
+              r.scene_number === result.scene_number ? result : r,
+            )
+          : [...state.storyboardResults, result].sort(
+              (a, b) => a.scene_number - b.scene_number,
+            ),
+      };
+    }),
+
+  addOrUpdateVideoScene: (result) =>
+    set((state) => {
+      const exists = state.videoResults.some(
+        (r) => r.scene_number === result.scene_number,
+      );
+      return {
+        videoResults: exists
+          ? state.videoResults.map((r) =>
+              r.scene_number === result.scene_number ? result : r,
+            )
+          : [...state.videoResults, result].sort(
+              (a, b) => a.scene_number - b.scene_number,
+            ),
+      };
+    }),
+
   setFinalVideo: (path) => set({ finalVideoPath: path }),
 
   addLog: (message, level) =>
@@ -121,6 +161,8 @@ export const usePipelineStore = create<PipelineState>((set) => ({
 
   setVeoResolution: (resolution) => set({ veoResolution: resolution }),
 
+  setAspectRatio: (ratio) => set({ aspectRatio: ratio }),
+
   loadJob: (job) => {
     // Compute the furthest step with data
     let step = 0;
@@ -132,6 +174,7 @@ export const usePipelineStore = create<PipelineState>((set) => ({
 
     set({
       runId: job.job_id,
+      originalRequest: job.request ?? null,
       script: job.script ?? null,
       avatarVariants: job.avatar_variants ?? [],
       selectedAvatarIndex: null,

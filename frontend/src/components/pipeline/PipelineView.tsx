@@ -9,31 +9,17 @@ import VideoPlayer from './VideoPlayer';
 import FinalPlayer from './FinalPlayer';
 import ReviewActions from '../review/ReviewActions';
 import { usePipeline } from '../../hooks/usePipeline';
+import { usePipelineStore } from '../../store/pipelineStore';
 
 export default function PipelineView() {
   const pipeline = usePipeline();
 
-  const {
-    runId,
-    script,
-    avatarVariants,
-    storyboardResults,
-    videoResults,
-    finalVideoPath
-  } = pipeline;
+  const { runId } = pipeline;
+  const originalRequest = usePipelineStore((s) => s.originalRequest);
 
-  const getReadOnlyStatus = (step: number) => {
-    switch (step) {
-      case 0: return !!runId;
-      case 1: return avatarVariants.length > 0;
-      case 2: return storyboardResults.length > 0;
-      case 3: return videoResults.length > 0;
-      case 4: return !!finalVideoPath;
-      default: return false;
-    }
-  };
-
-  const isReadOnly = getReadOnlyStatus(pipeline.activeStep);
+  // Only step 0 (Input) is read-only once a run exists — all other steps
+  // always show controls so the user can re-generate with different settings.
+  const isInputReadOnly = !!runId;
 
   const handleNewGeneration = () => {
     pipeline.reset();
@@ -53,7 +39,8 @@ export default function PipelineView() {
         <ProductForm
           onSubmit={pipeline.startPipeline}
           isLoading={pipeline.isLoading}
-          readOnly={isReadOnly}
+          readOnly={isInputReadOnly}
+          initialRequest={originalRequest}
         />
       );
       break;
@@ -65,7 +52,6 @@ export default function PipelineView() {
           onContinue={pipeline.navigateToAvatarStep}
           onUpdateScript={pipeline.updateScript}
           isLoading={pipeline.isLoading}
-          readOnly={isReadOnly}
         />
       );
       break;
@@ -79,7 +65,6 @@ export default function PipelineView() {
           onGenerate={pipeline.generateAvatars}
           onContinue={pipeline.confirmAvatarSelection}
           isLoading={pipeline.isLoading}
-          readOnly={isReadOnly}
         />
       );
       break;
@@ -92,7 +77,7 @@ export default function PipelineView() {
           onGenerate={(options) => pipeline.generateStoryboard(options)}
           onRegenScene={(sceneNumber, options) => pipeline.regenStoryboardScene(sceneNumber, options)}
           isLoading={pipeline.isLoading}
-          readOnly={isReadOnly}
+          totalScenes={pipeline.script?.scenes.length}
         />
       );
       break;
@@ -106,7 +91,7 @@ export default function PipelineView() {
           onSelectVariant={pipeline.selectVideoVariant}
           onRegenScene={(sceneNumber, options) => pipeline.regenVideoScene(sceneNumber, options)}
           isLoading={pipeline.isLoading}
-          readOnly={isReadOnly}
+          totalScenes={pipeline.storyboardResults.length}
         />
       );
       break;
@@ -119,6 +104,7 @@ export default function PipelineView() {
           totalDuration={pipeline.script.total_duration}
           onSubmitForReview={pipeline.submitForReview}
           isLoading={pipeline.isLoading}
+          aspectRatio={pipeline.aspectRatio}
         />
       ) : null;
       break;

@@ -14,6 +14,7 @@ interface FinalPlayerProps {
   totalDuration: number;
   onSubmitForReview: () => void;
   isLoading: boolean;
+  aspectRatio?: string;
 }
 
 export default function FinalPlayer({
@@ -22,14 +23,24 @@ export default function FinalPlayer({
   totalDuration,
   onSubmitForReview,
   isLoading,
+  aspectRatio,
 }: FinalPlayerProps) {
-  const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = videoPath;
-    link.download = 'final_commercial.mp4';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(videoPath);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'final_commercial.mp4';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch {
+      // Fallback to direct link
+      window.open(videoPath, '_blank');
+    }
   };
 
   return (
@@ -41,7 +52,7 @@ export default function FinalPlayer({
 
         <Box
           sx={{
-            backgroundColor: '#000',
+            backgroundColor: 'common.black',
             borderRadius: 2,
             overflow: 'hidden',
             mb: 3,
@@ -62,6 +73,12 @@ export default function FinalPlayer({
           <Chip label={`${totalDuration}s duration`} variant="outlined" />
           <Chip label={`${scenesCount} scenes`} variant="outlined" />
           <Chip label="1080p" variant="outlined" />
+          {aspectRatio && (
+            <Chip
+              label={aspectRatio === '16:9' ? '16:9 Landscape' : '9:16 Portrait'}
+              variant="outlined"
+            />
+          )}
         </Box>
 
         <Box sx={{ display: 'flex', gap: 2 }}>
