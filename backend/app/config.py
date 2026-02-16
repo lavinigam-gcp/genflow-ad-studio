@@ -32,10 +32,10 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("image_model", "IMAGE_MODEL"),
     )
     veo_model: str = Field(
-        default="veo-3.1-fast-generate-preview",
+        default="veo-3.1-generate-001",
         validation_alias=AliasChoices("veo_model", "VEO_MODEL", "VEO_MODEL_ID"),
     )
-    veo_fast_model: str = "veo-3.1-fast-generate-preview"
+    veo_fast_model: str = "veo-3.1-fast-generate-001"
     imagen_model: str = "imagen-4.0-generate-001"
 
     output_dir: str = "output"
@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     max_video_variants: int = 4
     max_avatar_variants: int = 4
     max_concurrent_scenes: int = 5
+
+    # Video generation settings
+    default_video_duration: int = 8
+    default_video_compression: str = "optimized"
+    max_video_qc_regen_attempts: int = 2
 
     # Script generation settings
     script_default_scene_count: int = 3

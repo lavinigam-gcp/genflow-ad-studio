@@ -33,47 +33,108 @@ class VeoService:
         seed: int | None = None,
         resolution: str = "720p",
         negative_prompt_extra: str = "",
+        asset_image_uris: list[str] | None = None,
+        aspect_ratio: str = "9:16",
+        duration_seconds: int = 8,
+        compression_quality: str = "optimized",
+        veo_model: str | None = None,
     ) -> list[str]:
         """Generate video variants using Veo 3.1.
 
         Returns a list of GCS URIs for the generated video files.
-        The reference_image_uri is a GCS URI to the storyboard frame
-        used as the first-frame reference for the video.
-        """
-        image = types.Image(
-            gcs_uri=reference_image_uri,
-            mime_type="image/png",
-        )
 
+        Veo API constraint: ``image`` (first-frame) and ``reference_images``
+        (asset refs) are **mutually exclusive**.  When asset reference URIs are
+        provided we use ``reference_images`` for character/product consistency
+        and let the prompt describe the scene composition.  Otherwise we pass
+        the storyboard frame as ``image`` for first-frame guidance.
+
+        Args:
+            reference_image_uri: GCS URI to the storyboard frame (first-frame
+                reference, used only when asset_image_uris is empty).
+            asset_image_uris: Up to 3 GCS URIs for asset reference images
+                (avatar, product, prev-scene last frame).
+            aspect_ratio: "9:16" or "16:9".
+            duration_seconds: 4, 6, or 8. Must be 8 when using reference images
+                or high resolution.
+            compression_quality: "optimized" or "lossless".
+            veo_model: Override the default Veo model ID.
+        """
         # Combine global negative prompt with per-scene extras
         full_negative = VIDEO_NEGATIVE_PROMPT
         if negative_prompt_extra:
             full_negative = f"{VIDEO_NEGATIVE_PROMPT}, {negative_prompt_extra}"
 
+        # Enforce constraints: referenceImages or high resolution require 8s
+        effective_duration = duration_seconds
+        if asset_image_uris and effective_duration != 8:
+            logger.warning(
+                "referenceImages requires duration_seconds=8, overriding %d→8",
+                effective_duration,
+            )
+            effective_duration = 8
+        if resolution in ("1080p", "4k") and effective_duration != 8:
+            logger.warning(
+                "High resolution (%s) requires duration_seconds=8, overriding %d→8",
+                resolution,
+                effective_duration,
+            )
+            effective_duration = 8
+
+        # When referenceImages used, person_generation must be "allow_adult"
+        person_gen = "allow_adult" if asset_image_uris else "allow_all"
+
         config_kwargs: dict = dict(
-            aspect_ratio="9:16",
+            aspect_ratio=aspect_ratio,
             number_of_videos=num_variants,
-            duration_seconds=8,
+            duration_seconds=effective_duration,
             generate_audio=True,
             negative_prompt=full_negative,
-            person_generation="allow_all",
+            person_generation=person_gen,
             output_gcs_uri=output_gcs_uri,
         )
 
         if seed is not None:
             config_kwargs["seed"] = seed
 
+        # Veo API: `image` and `reference_images` are mutually exclusive.
+        # When asset references are provided, use reference_images for
+        # character/product consistency.  Otherwise fall back to `image`
+        # for first-frame guidance from the storyboard.
+        use_asset_refs = bool(asset_image_uris)
+
+        if use_asset_refs:
+            config_kwargs["reference_images"] = [
+                types.VideoGenerationReferenceImage(
+                    image=types.Image(gcs_uri=uri, mime_type="image/png"),
+                    reference_type="asset",
+                )
+                for uri in asset_image_uris[:3]  # Max 3 reference images
+            ]
+
         config = types.GenerateVideosConfig(**config_kwargs)
 
-        operation = await asyncio.to_thread(
-            self.client.models.generate_videos,
-            model=self.settings.veo_model,
+        model_id = veo_model or self.settings.veo_model
+
+        generate_kwargs: dict = dict(
+            model=model_id,
             prompt=prompt,
-            image=image,
             config=config,
         )
 
-        logger.info("Veo operation started: %s", getattr(operation, "name", ""))
+        # Only pass `image` when NOT using reference_images (mutually exclusive)
+        if not use_asset_refs:
+            generate_kwargs["image"] = types.Image(
+                gcs_uri=reference_image_uri,
+                mime_type="image/png",
+            )
+
+        operation = await asyncio.to_thread(
+            self.client.models.generate_videos,
+            **generate_kwargs,
+        )
+
+        logger.info("Veo operation started: %s (model=%s)", getattr(operation, "name", ""), model_id)
 
         completed = await self.poll_operation(operation)
 
@@ -87,8 +148,19 @@ class VeoService:
                 if uri:
                     video_uris.append(uri)
                     logger.info("Generated video: %s", uri)
+        else:
+            # Log detailed info about the failed operation
+            logger.error(
+                "Veo operation returned no videos. response=%s, error=%s, metadata=%s",
+                getattr(completed, "response", None),
+                getattr(completed, "error", None),
+                getattr(completed, "metadata", None),
+            )
 
         if not video_uris:
-            raise ValueError("Veo returned no video outputs")
+            error_detail = getattr(completed, "error", None)
+            raise ValueError(
+                f"Veo returned no video outputs. error={error_detail}"
+            )
 
         return video_uris

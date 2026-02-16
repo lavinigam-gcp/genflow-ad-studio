@@ -213,7 +213,7 @@ The product shown in the second reference image MUST appear identical — \
 preserve exact colors, logos, text, and proportions of the product. \
 {product_visual_integration}.
 
-Shot on professional cinema camera, 85mm portrait lens, 9:16 vertical \
+Shot on professional cinema camera, 85mm portrait lens, {aspect_ratio} \
 format, cinematic color grading, shallow depth of field with subject \
 and product in sharp focus, broadcast-quality advertising photography.\
 """

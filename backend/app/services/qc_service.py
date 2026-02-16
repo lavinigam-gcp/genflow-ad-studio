@@ -47,17 +47,25 @@ class QCService:
             overall_verdict=raw.get("overall_verdict", ""),
         )
 
-    def storyboard_passes_qc(self, report: StoryboardQCReport) -> bool:
+    def storyboard_passes_qc(
+        self,
+        report: StoryboardQCReport,
+        threshold: int | None = None,
+        include_composition: bool = False,
+    ) -> bool:
         """Check if avatar and product scores meet the threshold."""
-        threshold = self.settings.storyboard_qc_threshold
-        return (
-            report.avatar_validation.score >= threshold
-            and report.product_validation.score >= threshold
+        effective_threshold = threshold or self.settings.storyboard_qc_threshold
+        passes = (
+            report.avatar_validation.score >= effective_threshold
+            and report.product_validation.score >= effective_threshold
         )
+        if include_composition and report.composition_quality:
+            passes = passes and report.composition_quality.score >= effective_threshold
+        return passes
 
-    def video_passes_qc(self, report: VideoQCReport) -> bool:
+    def video_passes_qc(self, report: VideoQCReport, threshold: int | None = None) -> bool:
         """Check if all video QC dimension scores meet the threshold."""
-        threshold = self.settings.video_qc_threshold
+        threshold = threshold or self.settings.video_qc_threshold
         return (
             report.technical_distortion.score >= threshold
             and report.cinematic_imperfections.score >= threshold
@@ -82,6 +90,32 @@ class QCService:
                 f"Composition quality score: {qc_report.composition_quality.score}/100 - "
                 f"{qc_report.composition_quality.reason}"
             )
+        qc_feedback = "\n".join(feedback_parts)
+        return await self.gemini.rewrite_prompt(original_prompt, qc_feedback)
+
+    async def rewrite_video_prompt(self, original_prompt: str, qc_report: VideoQCReport) -> str:
+        """Use Gemini to rewrite a video prompt based on QC feedback."""
+        feedback_parts: list[str] = []
+        feedback_parts.append(
+            f"Technical distortion score: {qc_report.technical_distortion.score}/10 - "
+            f"{qc_report.technical_distortion.reasoning}"
+        )
+        feedback_parts.append(
+            f"Cinematic imperfections score: {qc_report.cinematic_imperfections.score}/10 - "
+            f"{qc_report.cinematic_imperfections.reasoning}"
+        )
+        feedback_parts.append(
+            f"Avatar consistency score: {qc_report.avatar_consistency.score}/10 - "
+            f"{qc_report.avatar_consistency.reasoning}"
+        )
+        feedback_parts.append(
+            f"Product consistency score: {qc_report.product_consistency.score}/10 - "
+            f"{qc_report.product_consistency.reasoning}"
+        )
+        feedback_parts.append(
+            f"Temporal coherence score: {qc_report.temporal_coherence.score}/10 - "
+            f"{qc_report.temporal_coherence.reasoning}"
+        )
         qc_feedback = "\n".join(feedback_parts)
         return await self.gemini.rewrite_prompt(original_prompt, qc_feedback)
 

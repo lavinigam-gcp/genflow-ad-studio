@@ -91,7 +91,9 @@ export default function PipelineView() {
       content = (
         <StoryboardGrid
           results={pipeline.storyboardResults}
-          onContinue={pipeline.generateVideos}
+          onContinue={() => pipeline.navigateToVideoStep()}
+          onGenerate={(options) => pipeline.generateStoryboard(options)}
+          onRegenScene={(sceneNumber, options) => pipeline.regenStoryboardScene(sceneNumber, options)}
           isLoading={pipeline.isLoading}
           readOnly={isReadOnly}
         />
@@ -102,8 +104,10 @@ export default function PipelineView() {
       content = (
         <VideoPlayer
           results={pipeline.videoResults}
-          onContinue={pipeline.stitchFinalVideo}
+          onContinue={() => pipeline.stitchFinalVideo()}
+          onGenerate={(options) => pipeline.generateVideos(options)}
           onSelectVariant={pipeline.selectVideoVariant}
+          onRegenScene={(sceneNumber, options) => pipeline.regenVideoScene(sceneNumber, options)}
           isLoading={pipeline.isLoading}
           readOnly={isReadOnly}
         />

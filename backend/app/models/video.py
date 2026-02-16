@@ -11,6 +11,15 @@ class VideoRequest(BaseModel):
     avatar_profile: AvatarProfile
     seed: int | None = None
     resolution: str = "720p"
+    veo_model: str | None = None
+    aspect_ratio: str = "9:16"
+    duration_seconds: int = Field(default=8, ge=4, le=8)
+    num_variants: int = Field(default=4, ge=1, le=4)
+    compression_quality: str = "optimized"
+    qc_threshold: int = Field(default=6, ge=0, le=10)
+    max_qc_regen_attempts: int = Field(default=0, ge=0, le=3)
+    use_reference_images: bool = True
+    negative_prompt_extra: str = ""
 
 
 class VideoQCDimension(BaseModel):
@@ -38,6 +47,27 @@ class VideoResult(BaseModel):
     variants: list[VideoVariant]
     selected_index: int
     selected_video_path: str
+    regen_attempts: int = 0
+    prompt_used: str = ""
+
+
+class VideoRegenRequest(BaseModel):
+    run_id: str
+    scene_number: int
+    scene: Scene
+    storyboard_result: StoryboardResult
+    avatar_profile: AvatarProfile
+    seed: int | None = None
+    resolution: str = "720p"
+    veo_model: str | None = None
+    aspect_ratio: str = "9:16"
+    duration_seconds: int = Field(default=8, ge=4, le=8)
+    num_variants: int = Field(default=4, ge=1, le=4)
+    compression_quality: str = "optimized"
+    qc_threshold: int = Field(default=6, ge=0, le=10)
+    max_qc_regen_attempts: int = Field(default=0, ge=0, le=3)
+    use_reference_images: bool = True
+    negative_prompt_extra: str = ""
 
 
 class VideoSelectRequest(BaseModel):

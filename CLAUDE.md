@@ -28,10 +28,13 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Imagen 4 + Veo 3
 - QC feedback loop: generate → QC score → rewrite prompt → regenerate (max 3 attempts)
 - SSE events: add to `SSEEventType` enum + backend `broadcaster.emit()` + frontend `useSSE` handler
 - `image_url` accepts local `/output/...` paths — services detect prefix and read from disk
-- Video duration = `scene_count × 8` (Veo 8s clips) — not user-configurable
+- Video duration = user-selectable 4/6/8s (8s required with reference images or high resolution)
 - File uploads: use `api.upload()` with FormData — `api.post()` is for JSON only
 - `detailed_avatar_description` must be identical across all scenes for Veo consistency
 - Same Veo `seed` across all scenes for character/voice consistency
+- Veo API: `image` (first-frame) and `reference_images` (asset refs) are **mutually exclusive** — `use_reference_images` flag controls which mode
+- Scene-to-scene continuity: last frame extracted from each scene's selected video and passed as asset reference to the next scene
+- Veo `reference_images` only supported on Preview models — GA models fall back to `image` (storyboard first-frame)
 - Imagen 4 does NOT support `negative_prompt` — use positive prompting only
 - Dialogue: colon notation without quotes (prevents Veo text rendering)
 - Transition types in script map to FFmpeg xfade effects via `TRANSITION_MAP` in `ffmpeg.py`

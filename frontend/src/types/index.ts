@@ -104,6 +104,28 @@ export interface StoryboardResult {
   image_path: string;
   qc_report: StoryboardQCReport;
   regen_attempts: number;
+  prompt_used?: string;
+}
+
+export interface StoryboardGenerateOptions {
+  image_model?: string;
+  aspect_ratio?: string;
+  qc_threshold?: number;
+  max_regen_attempts?: number;
+  include_composition_qc?: boolean;
+  custom_prompts?: Record<number, string>;
+}
+
+export interface StoryboardRegenRequest {
+  run_id: string;
+  scene_number: number;
+  scene: Scene;
+  image_model?: string;
+  aspect_ratio?: string;
+  qc_threshold?: number;
+  max_regen_attempts?: number;
+  include_composition_qc?: boolean;
+  custom_prompt?: string;
 }
 
 export interface VideoQCDimension {
@@ -131,6 +153,41 @@ export interface VideoResult {
   variants: VideoVariant[];
   selected_index: number;
   selected_video_path: string;
+  regen_attempts?: number;
+  prompt_used?: string;
+}
+
+export interface VideoGenerateOptions {
+  seed?: number;
+  resolution?: string;
+  veo_model?: string;
+  aspect_ratio?: string;
+  duration_seconds?: number;
+  num_variants?: number;
+  compression_quality?: string;
+  qc_threshold?: number;
+  max_qc_regen_attempts?: number;
+  use_reference_images?: boolean;
+  negative_prompt_extra?: string;
+}
+
+export interface VideoRegenRequest {
+  run_id: string;
+  scene_number: number;
+  scene: Scene;
+  storyboard_result: StoryboardResult;
+  avatar_profile: AvatarProfile;
+  seed?: number;
+  resolution?: string;
+  veo_model?: string;
+  aspect_ratio?: string;
+  duration_seconds?: number;
+  num_variants?: number;
+  compression_quality?: string;
+  qc_threshold?: number;
+  max_qc_regen_attempts?: number;
+  use_reference_images?: boolean;
+  negative_prompt_extra?: string;
 }
 
 export interface VideoSelectRequest {

@@ -37,6 +37,34 @@ def _get_duration(video_path: str) -> float:
         return 8.0
 
 
+async def extract_last_frame(video_path: str, output_path: str) -> str:
+    """Extract the last frame from a video as a PNG image.
+
+    Uses ffmpeg to seek near the end, then grab the final frame.
+    Returns the output path on success.
+    """
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    # sseof seeks relative to end — grab last 0.1s then take 1 frame
+    cmd = [
+        "ffmpeg", "-y",
+        "-sseof", "-0.1",
+        "-i", video_path,
+        "-frames:v", "1",
+        "-update", "1",
+        output_path,
+    ]
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    _, stderr = await proc.communicate()
+    if proc.returncode != 0:
+        raise RuntimeError(f"ffmpeg extract_last_frame failed: {stderr.decode()[-500:]}")
+    logger.info("Extracted last frame from %s → %s", video_path, output_path)
+    return output_path
+
+
 async def _preprocess_video(input_path: str, output_path: str) -> str:
     """Re-encode a single video to ensure CFR and consistent format.
 

@@ -1,7 +1,13 @@
 import { useCallback } from 'react';
 import { usePipelineStore } from '../store/pipelineStore';
 import * as pipelineApi from '../api/pipeline';
-import type { ScriptRequest, VideoScript, AvatarGenerateOptions } from '../types';
+import type {
+  ScriptRequest,
+  VideoScript,
+  AvatarGenerateOptions,
+  StoryboardGenerateOptions,
+  VideoGenerateOptions,
+} from '../types';
 
 export function usePipeline() {
   const store = usePipelineStore();
@@ -69,31 +75,18 @@ export function usePipeline() {
   }, [store]);
 
   const confirmAvatarSelection = useCallback(async () => {
-    const { runId, selectedAvatarIndex, script: currentScript } = usePipelineStore.getState();
+    const { runId, selectedAvatarIndex } = usePipelineStore.getState();
     if (!runId || selectedAvatarIndex === null) return;
     store.setLoading(true);
     store.setError(null);
-    store.addLog(`Selecting avatar variant ${selectedAvatarIndex}${currentScript ? `, preparing ${currentScript.scenes.length} scene storyboard` : ''}`, 'info');
+    store.addLog(`Selecting avatar variant ${selectedAvatarIndex}...`, 'info');
 
     try {
       await pipelineApi.selectAvatar(runId, selectedAvatarIndex);
       store.setStep(3);
-      store.addLog('Avatar selected, generating storyboard...', 'success');
-
-      const { script } = usePipelineStore.getState();
-      if (script) {
-        store.addLog('Generating storyboard with QC...', 'info');
-        const t0 = Date.now();
-        const sbResponse = await pipelineApi.generateStoryboard(runId, script.scenes);
-        store.setStoryboard(sbResponse.results);
-        const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
-        store.addLog(
-          `Storyboard generated: ${sbResponse.results.length} scenes in ${elapsed}s`,
-          'success',
-        );
-      }
+      store.addLog('Avatar selected — configure storyboard settings and click Generate', 'success');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed during avatar/storyboard step';
+      const message = err instanceof Error ? err.message : 'Failed to select avatar';
       store.setError(message);
       store.addLog(message, 'error');
     } finally {
@@ -101,8 +94,62 @@ export function usePipeline() {
     }
   }, [store]);
 
-  const generateVideos = useCallback(async () => {
-    const { runId, storyboardResults, script, veoSeed, veoResolution } = usePipelineStore.getState();
+  const generateStoryboard = useCallback(async (options?: StoryboardGenerateOptions) => {
+    const { runId, script } = usePipelineStore.getState();
+    if (!runId || !script) return;
+    store.setLoading(true);
+    store.setError(null);
+    store.addLog(`Generating storyboard with QC for ${script.scenes.length} scenes...`, 'info');
+
+    try {
+      const t0 = Date.now();
+      const sbResponse = await pipelineApi.generateStoryboard(runId, script.scenes, options);
+      store.setStoryboard(sbResponse.results);
+      const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+      store.addLog(
+        `Storyboard generated: ${sbResponse.results.length} scenes in ${elapsed}s`,
+        'success',
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to generate storyboard';
+      store.setError(message);
+      store.addLog(message, 'error');
+    } finally {
+      store.setLoading(false);
+    }
+  }, [store]);
+
+  const regenStoryboardScene = useCallback(async (
+    sceneNumber: number,
+    options?: Omit<StoryboardGenerateOptions, 'custom_prompts'> & { custom_prompt?: string },
+  ) => {
+    const { runId, script } = usePipelineStore.getState();
+    if (!runId || !script) return;
+    const scene = script.scenes.find((s) => s.scene_number === sceneNumber);
+    if (!scene) return;
+    store.setError(null);
+    store.addLog(`Regenerating storyboard for scene ${sceneNumber}...`, 'info');
+
+    try {
+      const result = await pipelineApi.regenStoryboardScene(runId, sceneNumber, scene, options);
+      // Cache-bust the image path
+      const cacheBust = Date.now();
+      const updatedResult = { ...result, image_path: `${result.image_path}?t=${cacheBust}` };
+      store.updateStoryboardScene(sceneNumber, updatedResult);
+      store.addLog(`Scene ${sceneNumber} storyboard regenerated`, 'success');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : `Failed to regen scene ${sceneNumber}`;
+      store.setError(message);
+      store.addLog(message, 'error');
+    }
+  }, [store]);
+
+  const navigateToVideoStep = useCallback(() => {
+    store.setStep(4);
+  }, [store]);
+
+  const generateVideos = useCallback(async (options?: VideoGenerateOptions) => {
+    const { runId, storyboardResults, script } = usePipelineStore.getState();
     if (!runId || !script || storyboardResults.length === 0) return;
     store.setLoading(true);
     store.setError(null);
@@ -115,11 +162,9 @@ export function usePipeline() {
         storyboardResults,
         script.scenes,
         script.avatar_profile,
-        veoSeed,
-        veoResolution,
+        options,
       );
       store.setVideos(response.results);
-      store.setStep(4);
       const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
       store.addLog(`Videos generated for ${response.results.length} scenes in ${elapsed}s`, 'success');
     } catch (err) {
@@ -128,6 +173,36 @@ export function usePipeline() {
       store.addLog(message, 'error');
     } finally {
       store.setLoading(false);
+    }
+  }, [store]);
+
+  const regenVideoScene = useCallback(async (
+    sceneNumber: number,
+    options?: VideoGenerateOptions,
+  ) => {
+    const { runId, script, storyboardResults } = usePipelineStore.getState();
+    if (!runId || !script) return;
+    const scene = script.scenes.find((s) => s.scene_number === sceneNumber);
+    const sbResult = storyboardResults.find((r) => r.scene_number === sceneNumber);
+    if (!scene || !sbResult) return;
+    store.setError(null);
+    store.addLog(`Regenerating video for scene ${sceneNumber}...`, 'info');
+
+    try {
+      const response = await pipelineApi.regenVideoScene(
+        runId,
+        sceneNumber,
+        scene,
+        sbResult,
+        script.avatar_profile,
+        options,
+      );
+      store.updateVideoScene(sceneNumber, response.result);
+      store.addLog(`Scene ${sceneNumber} video regenerated`, 'success');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : `Failed to regen video scene ${sceneNumber}`;
+      store.setError(message);
+      store.addLog(message, 'error');
     }
   }, [store]);
 
@@ -240,7 +315,11 @@ export function usePipeline() {
     navigateToAvatarStep,
     generateAvatars,
     confirmAvatarSelection,
+    generateStoryboard,
+    regenStoryboardScene,
+    navigateToVideoStep,
     generateVideos,
+    regenVideoScene,
     selectVideoVariant,
     stitchFinalVideo,
     submitForReview,

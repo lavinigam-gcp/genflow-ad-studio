@@ -99,7 +99,11 @@ class GeminiImageService:
 
     @async_retry(retries=3)
     async def generate_storyboard_image(
-        self, prompt: str, avatar_bytes: bytes, product_bytes: bytes
+        self,
+        prompt: str,
+        avatar_bytes: bytes,
+        product_bytes: bytes,
+        image_model: str | None = None,
     ) -> bytes:
         """Generate a storyboard image with avatar and product reference images.
 
@@ -115,7 +119,7 @@ class GeminiImageService:
         text_part = types.Part.from_text(text=prompt)
 
         response = await self.client.aio.models.generate_content(
-            model=self.settings.image_model,
+            model=image_model or self.settings.image_model,
             contents=[avatar_part, product_part, text_part],
             config=types.GenerateContentConfig(
                 response_modalities=["IMAGE"],

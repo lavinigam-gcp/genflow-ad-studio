@@ -23,8 +23,8 @@ from app.models.avatar import (
     AvatarSelectResponse,
 )
 from app.models.script import ScriptRequest, ScriptResponse, ScriptUpdateRequest
-from app.models.storyboard import StoryboardRequest, StoryboardResponse
-from app.models.video import VideoRequest, VideoResponse, VideoSelectRequest
+from app.models.storyboard import StoryboardRegenRequest, StoryboardRequest, StoryboardResponse, StoryboardResult
+from app.models.video import VideoRegenRequest, VideoRequest, VideoResponse, VideoSelectRequest
 from app.services.avatar_service import AvatarService
 from app.services.pipeline_service import PipelineService
 from app.services.script_service import ScriptService
@@ -176,6 +176,12 @@ async def generate_storyboard(
         response = await storyboard_svc.generate_storyboard(
             run_id=request.run_id,
             scenes=request.scenes,
+            image_model=request.image_model,
+            aspect_ratio=request.aspect_ratio,
+            qc_threshold=request.qc_threshold,
+            max_regen_attempts=request.max_regen_attempts,
+            include_composition_qc=request.include_composition_qc,
+            custom_prompts=request.custom_prompts,
         )
         if job_store.get_job(request.run_id):
             job_store.update_job(request.run_id, storyboard_results=response.results)
@@ -184,6 +190,40 @@ async def generate_storyboard(
         raise HTTPException(status_code=404, detail=str(exc))
     except Exception as exc:
         logger.exception("Storyboard generation failed")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/storyboard/regen-scene")
+async def regen_storyboard_scene(
+    request: StoryboardRegenRequest,
+    storyboard_svc: StoryboardService = Depends(get_storyboard_service),
+    job_store: JobStore = Depends(get_job_store),
+) -> StoryboardResult:
+    """Regenerate a single scene's storyboard image."""
+    try:
+        result = await storyboard_svc.regenerate_single_scene(
+            run_id=request.run_id,
+            scene=request.scene,
+            image_model=request.image_model,
+            aspect_ratio=request.aspect_ratio,
+            qc_threshold=request.qc_threshold,
+            max_regen_attempts=request.max_regen_attempts,
+            include_composition_qc=request.include_composition_qc,
+            custom_prompt=request.custom_prompt or None,
+        )
+        # Update the specific scene in the job's storyboard results
+        job = job_store.get_job(request.run_id)
+        if job and job.storyboard_results:
+            updated = [
+                result if r.scene_number == request.scene_number else r
+                for r in job.storyboard_results
+            ]
+            job_store.update_job(request.run_id, storyboard_results=updated)
+        return result
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Storyboard scene regen failed")
         raise HTTPException(status_code=500, detail=str(exc))
 
 
@@ -202,6 +242,15 @@ async def generate_video(
             avatar_profile=request.avatar_profile,
             seed=request.seed,
             resolution=request.resolution,
+            veo_model=request.veo_model,
+            aspect_ratio=request.aspect_ratio,
+            duration_seconds=request.duration_seconds,
+            num_variants=request.num_variants,
+            compression_quality=request.compression_quality,
+            qc_threshold=request.qc_threshold,
+            max_qc_regen_attempts=request.max_qc_regen_attempts,
+            use_reference_images=request.use_reference_images,
+            negative_prompt_extra=request.negative_prompt_extra,
         )
         if job_store.get_job(request.run_id):
             job_store.update_job(request.run_id, video_results=response.results)
@@ -210,6 +259,47 @@ async def generate_video(
         raise HTTPException(status_code=404, detail=str(exc))
     except Exception as exc:
         logger.exception("Video generation failed")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/video/regen-scene")
+async def regen_video_scene(
+    request: VideoRegenRequest,
+    video_svc: VideoService = Depends(get_video_service),
+    job_store: JobStore = Depends(get_job_store),
+) -> dict:
+    """Regenerate video for a single scene."""
+    try:
+        result = await video_svc.regenerate_single_scene(
+            run_id=request.run_id,
+            sb_result=request.storyboard_result,
+            scene=request.scene,
+            avatar_profile=request.avatar_profile,
+            seed=request.seed,
+            resolution=request.resolution,
+            veo_model=request.veo_model,
+            aspect_ratio=request.aspect_ratio,
+            duration_seconds=request.duration_seconds,
+            num_variants=request.num_variants,
+            compression_quality=request.compression_quality,
+            qc_threshold=request.qc_threshold,
+            max_qc_regen_attempts=request.max_qc_regen_attempts,
+            use_reference_images=request.use_reference_images,
+            negative_prompt_extra=request.negative_prompt_extra,
+        )
+        # Update the specific scene in the job's video results
+        job = job_store.get_job(request.run_id)
+        if job and job.video_results:
+            updated = [
+                result if r.scene_number == request.scene_number else r
+                for r in job.video_results
+            ]
+            job_store.update_job(request.run_id, video_results=updated)
+        return {"status": "success", "result": result.model_dump()}
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Video scene regen failed")
         raise HTTPException(status_code=500, detail=str(exc))
 
 

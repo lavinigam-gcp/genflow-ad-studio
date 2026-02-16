@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -7,132 +8,494 @@ import {
   Grid,
   Box,
   Chip,
+  ToggleButtonGroup,
+  ToggleButton,
+  Slider,
+  Checkbox,
+  FormControlLabel,
+  TextField,
+  IconButton,
+  Tooltip,
+  Skeleton,
+  Dialog,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Collapse,
 } from '@mui/material';
-import { ArrowForward } from '@mui/icons-material';
+import type { SelectChangeEvent } from '@mui/material';
+import { ArrowForward, Refresh, ZoomIn, Close, ExpandMore, ExpandLess } from '@mui/icons-material';
 import QCBadge from '../qc/QCBadge';
 import QCDetailPanel from '../qc/QCDetailPanel';
-import type { StoryboardResult } from '../../types';
+import type { StoryboardResult, StoryboardGenerateOptions } from '../../types';
 
 interface StoryboardGridProps {
   results: StoryboardResult[];
   onContinue: () => void;
+  onGenerate: (options?: StoryboardGenerateOptions) => void;
+  onRegenScene: (sceneNumber: number, options?: Omit<StoryboardGenerateOptions, 'custom_prompts'> & { custom_prompt?: string }) => void;
   isLoading: boolean;
   readOnly?: boolean;
 }
 
-export default function StoryboardGrid({ results, onContinue, isLoading, readOnly = false }: StoryboardGridProps) {
+const ASPECT_RATIOS = [
+  { value: '9:16', hint: 'Reels / Shorts' },
+  { value: '16:9', hint: 'YouTube / Web' },
+  { value: '1:1', hint: 'Instagram Feed' },
+  { value: '3:4', hint: 'Pinterest / Portrait' },
+  { value: '4:3', hint: 'Presentation' },
+];
+
+const IMAGE_MODELS = [
+  { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image', description: 'Default' },
+  { id: 'imagen-4.0-generate-001', label: 'Imagen 4 Standard', description: 'High quality' },
+  { id: 'imagen-4.0-fast-generate-001', label: 'Imagen 4 Fast', description: 'Faster generation' },
+  { id: 'imagen-4.0-ultra-generate-001', label: 'Imagen 4 Ultra', description: 'Best quality' },
+];
+
+export default function StoryboardGrid({
+  results,
+  onContinue,
+  onGenerate,
+  onRegenScene,
+  isLoading,
+  readOnly = false,
+}: StoryboardGridProps) {
+  const [aspectRatio, setAspectRatio] = useState('9:16');
+  const [imageModel, setImageModel] = useState('gemini-3-pro-image-preview');
+  const [qcThreshold, setQcThreshold] = useState(60);
+  const [maxRegenAttempts, setMaxRegenAttempts] = useState(3);
+  const [includeCompositionQc, setIncludeCompositionQc] = useState(true);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [customPrompts, setCustomPrompts] = useState<Record<number, string>>({});
+  const [expandedPrompts, setExpandedPrompts] = useState<Record<number, boolean>>({});
+
+  const hasResults = results.length > 0;
+
   const avgAvatarScore =
-    results.length > 0
+    hasResults
       ? Math.round(
           results.reduce((sum, r) => sum + r.qc_report.avatar_validation.score, 0) /
             results.length
         )
       : 0;
   const avgProductScore =
-    results.length > 0
+    hasResults
       ? Math.round(
           results.reduce((sum, r) => sum + r.qc_report.product_validation.score, 0) /
             results.length
         )
       : 0;
 
+  const buildOptions = (): StoryboardGenerateOptions => ({
+    aspect_ratio: aspectRatio,
+    image_model: imageModel !== 'gemini-3-pro-image-preview' ? imageModel : undefined,
+    qc_threshold: qcThreshold,
+    max_regen_attempts: maxRegenAttempts,
+    include_composition_qc: includeCompositionQc,
+  });
+
+  const handleGenerate = () => {
+    onGenerate(buildOptions());
+  };
+
+  const handleRegenScene = (sceneNumber: number) => {
+    const { custom_prompts: _, ...rest } = buildOptions();
+    const prompt = customPrompts[sceneNumber]?.trim();
+    onRegenScene(sceneNumber, { ...rest, ...(prompt ? { custom_prompt: prompt } : {}) });
+  };
+
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+      {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
         <Typography variant="h5" sx={{ fontWeight: 600 }}>
           Storyboard
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Chip label={`${results.length} scenes`} variant="outlined" />
-          <QCBadge score={avgAvatarScore} label="Avg Avatar" />
-          <QCBadge score={avgProductScore} label="Avg Product" />
-        </Box>
+        {hasResults && (
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Chip label={`${results.length} scenes`} variant="outlined" />
+            <QCBadge score={avgAvatarScore} label="Avg Avatar" />
+            <QCBadge score={avgProductScore} label="Avg Product" />
+          </Box>
+        )}
       </Box>
 
-      <Grid container spacing={3}>
-        {results.map((result, index) => (
-          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={result.scene_number}>
-            <Card sx={{ animation: `fadeInUp 0.4s ease ${index * 0.1}s both` }}>
-              <Box sx={{ position: 'relative' }}>
-                <CardMedia
-                  component="img"
-                  height={220}
-                  image={result.image_path}
-                  alt={`Scene ${result.scene_number}`}
-                  sx={{ objectFit: 'cover' }}
-                />
-                <Chip
-                  label={`Scene ${result.scene_number}`}
-                  size="small"
-                  sx={{
-                    position: 'absolute',
-                    top: 8,
-                    left: 8,
-                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                    color: '#FFFFFF',
-                    fontWeight: 500,
-                  }}
-                />
-                {result.regen_attempts > 0 && (
-                  <Chip
-                    label={`${result.regen_attempts} regen`}
-                    size="small"
-                    sx={{
-                      position: 'absolute',
-                      top: 8,
-                      right: 8,
-                      backgroundColor: 'rgba(232, 113, 10, 0.85)',
-                      color: '#FFFFFF',
-                      fontSize: 11,
-                    }}
-                  />
-                )}
-              </Box>
-              <CardContent sx={{ pb: 1 }}>
-                <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                  <QCBadge score={result.qc_report.avatar_validation.score} label="Avatar" />
-                  <QCBadge score={result.qc_report.product_validation.score} label="Product" />
-                </Box>
-                <QCDetailPanel
-                  dimensions={[
-                    {
-                      label: 'Avatar Validation',
-                      score: result.qc_report.avatar_validation.score,
-                      reasoning: result.qc_report.avatar_validation.reason,
-                    },
-                    {
-                      label: 'Product Validation',
-                      score: result.qc_report.product_validation.score,
-                      reasoning: result.qc_report.product_validation.reason,
-                    },
-                    ...(result.qc_report.composition_quality
-                      ? [
-                          {
-                            label: 'Composition',
-                            score: result.qc_report.composition_quality.score,
-                            reasoning: result.qc_report.composition_quality.reason,
-                          },
-                        ]
-                      : []),
-                  ]}
-                />
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+      {/* Controls panel */}
+      {!readOnly && (
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2.5,
+            p: 3,
+            mb: 3,
+            border: '1px solid #DADCE0',
+            borderRadius: 2,
+            bgcolor: '#F8F9FA',
+          }}
+        >
+          {/* Row 1: Aspect ratio + Image model */}
+          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                Aspect Ratio
+              </Typography>
+              <ToggleButtonGroup
+                value={aspectRatio}
+                exclusive
+                onChange={(_, v) => { if (v !== null) setAspectRatio(v); }}
+                size="small"
+                disabled={isLoading}
+              >
+                {ASPECT_RATIOS.map((ratio) => (
+                  <ToggleButton key={ratio.value} value={ratio.value} sx={{ px: 1.5, textTransform: 'none', lineHeight: 1.2 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <span>{ratio.value}</span>
+                      <Typography variant="caption" sx={{ fontSize: 9, opacity: 0.7 }}>{ratio.hint}</Typography>
+                    </Box>
+                  </ToggleButton>
+                ))}
+              </ToggleButtonGroup>
+            </Box>
 
-      <Button
-        variant="contained"
-        color="primary"
-        fullWidth
-        onClick={onContinue}
-        disabled={isLoading || readOnly}
-        endIcon={<ArrowForward />}
-        sx={{ mt: 3, py: 1.5 }}
+            <FormControl size="small" sx={{ minWidth: 260 }}>
+              <InputLabel>Image Model</InputLabel>
+              <Select
+                value={imageModel}
+                label="Image Model"
+                onChange={(e: SelectChangeEvent) => setImageModel(e.target.value)}
+                disabled={isLoading}
+              >
+                {IMAGE_MODELS.map((m) => (
+                  <MenuItem key={m.id} value={m.id}>
+                    {m.label} — {m.description}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+
+          {/* Row 2: QC threshold + Max regen attempts */}
+          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <Box sx={{ minWidth: 220 }}>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                QC Threshold: {qcThreshold}
+              </Typography>
+              <Slider
+                value={qcThreshold}
+                onChange={(_, value) => setQcThreshold(value as number)}
+                min={0}
+                max={100}
+                step={5}
+                valueLabelDisplay="auto"
+                disabled={isLoading}
+              />
+            </Box>
+
+            <Box sx={{ minWidth: 220 }}>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                Max Regen Attempts: {maxRegenAttempts}
+              </Typography>
+              <Slider
+                value={maxRegenAttempts}
+                onChange={(_, value) => setMaxRegenAttempts(value as number)}
+                min={0}
+                max={10}
+                step={1}
+                marks
+                valueLabelDisplay="auto"
+                disabled={isLoading}
+              />
+            </Box>
+
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={includeCompositionQc}
+                  onChange={(e) => setIncludeCompositionQc(e.target.checked)}
+                  disabled={isLoading}
+                />
+              }
+              label={
+                <Typography variant="body2">Include Composition QC</Typography>
+              }
+            />
+          </Box>
+
+          {/* Row 3: Generate button */}
+          <Button
+            variant="contained"
+            color="primary"
+            fullWidth
+            onClick={() => handleGenerate()}
+            disabled={isLoading}
+            sx={{ py: 1.5, textTransform: 'none' }}
+          >
+            {isLoading
+              ? 'Generating...'
+              : hasResults
+                ? 'Regenerate Storyboard'
+                : 'Generate Storyboard'}
+          </Button>
+        </Box>
+      )}
+
+      {/* Skeleton loading state */}
+      {isLoading && !hasResults && (
+        <Grid container spacing={3}>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i}>
+              <Card>
+                <Skeleton variant="rectangular" height={220} />
+                <CardContent sx={{ pb: 1 }}>
+                  <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                    <Skeleton variant="rounded" width={80} height={24} />
+                    <Skeleton variant="rounded" width={80} height={24} />
+                  </Box>
+                  <Skeleton variant="text" width="60%" />
+                  <Skeleton variant="text" width="40%" />
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+
+      {/* Empty state */}
+      {!hasResults && !isLoading && (
+        <Box
+          sx={{
+            textAlign: 'center',
+            py: 6,
+            color: 'text.secondary',
+          }}
+        >
+          <Typography variant="body1">
+            Configure storyboard settings above and click Generate Storyboard
+          </Typography>
+        </Box>
+      )}
+
+      {/* Results grid */}
+      {hasResults && (
+        <>
+          <Grid container spacing={3}>
+            {results.map((result, index) => (
+              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={result.scene_number}>
+                <Card sx={{
+                  animation: `fadeInUp 0.4s ease ${index * 0.1}s both`,
+                  '&:hover .scene-zoom-btn': { opacity: 1 },
+                }}>
+                  <Box sx={{ position: 'relative', bgcolor: '#F0F0F0' }}>
+                    <CardMedia
+                      component="img"
+                      height={220}
+                      image={result.image_path}
+                      alt={`Scene ${result.scene_number}`}
+                      sx={{ objectFit: 'contain' }}
+                    />
+                    <Chip
+                      label={`Scene ${result.scene_number}`}
+                      size="small"
+                      sx={{
+                        position: 'absolute',
+                        top: 8,
+                        left: 8,
+                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                        color: '#FFFFFF',
+                        fontWeight: 500,
+                      }}
+                    />
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        display: 'flex',
+                        gap: 0.5,
+                        alignItems: 'center',
+                      }}
+                    >
+                      {result.regen_attempts > 0 && (
+                        <Chip
+                          label={`${result.regen_attempts} regen`}
+                          size="small"
+                          sx={{
+                            backgroundColor: 'rgba(232, 113, 10, 0.85)',
+                            color: '#FFFFFF',
+                            fontSize: 11,
+                          }}
+                        />
+                      )}
+                      <Tooltip title="Preview full size">
+                        <IconButton
+                          className="scene-zoom-btn"
+                          size="small"
+                          onClick={() => setPreviewUrl(result.image_path)}
+                          sx={{
+                            bgcolor: 'rgba(255, 255, 255, 0.85)',
+                            opacity: 0,
+                            transition: 'opacity 0.2s',
+                            '&:hover': { bgcolor: 'rgba(255, 255, 255, 1)' },
+                          }}
+                        >
+                          <ZoomIn fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      {!readOnly && (
+                        <Tooltip title="Regenerate scene">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleRegenScene(result.scene_number)}
+                            disabled={isLoading}
+                            sx={{
+                              bgcolor: 'rgba(255, 255, 255, 0.85)',
+                              '&:hover': { bgcolor: 'rgba(255, 255, 255, 1)' },
+                            }}
+                          >
+                            <Refresh fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
+                  </Box>
+                  <CardContent sx={{ pb: 1 }}>
+                    <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                      <QCBadge score={result.qc_report.avatar_validation.score} label="Avatar" />
+                      <QCBadge score={result.qc_report.product_validation.score} label="Product" />
+                    </Box>
+                    <QCDetailPanel
+                      dimensions={[
+                        {
+                          label: 'Avatar Validation',
+                          score: result.qc_report.avatar_validation.score,
+                          reasoning: result.qc_report.avatar_validation.reason,
+                        },
+                        {
+                          label: 'Product Validation',
+                          score: result.qc_report.product_validation.score,
+                          reasoning: result.qc_report.product_validation.reason,
+                        },
+                        ...(result.qc_report.composition_quality
+                          ? [
+                              {
+                                label: 'Composition',
+                                score: result.qc_report.composition_quality.score,
+                                reasoning: result.qc_report.composition_quality.reason,
+                              },
+                            ]
+                          : []),
+                      ]}
+                    />
+                    {/* Prompt used — expandable */}
+                    {result.prompt_used && (
+                      <Box sx={{ mt: 1 }}>
+                        <Box
+                          onClick={() => setExpandedPrompts((p) => ({ ...p, [result.scene_number]: !p[result.scene_number] }))}
+                          sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: 0.5 }}
+                        >
+                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                            Prompt Used
+                          </Typography>
+                          {expandedPrompts[result.scene_number] ? <ExpandLess sx={{ fontSize: 16 }} /> : <ExpandMore sx={{ fontSize: 16 }} />}
+                        </Box>
+                        <Collapse in={!!expandedPrompts[result.scene_number]}>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              display: 'block',
+                              mt: 0.5,
+                              p: 1,
+                              bgcolor: '#F5F5F5',
+                              borderRadius: 1,
+                              fontFamily: 'monospace',
+                              fontSize: 11,
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word',
+                              maxHeight: 160,
+                              overflow: 'auto',
+                            }}
+                          >
+                            {result.prompt_used}
+                          </Typography>
+                        </Collapse>
+                      </Box>
+                    )}
+                    {/* Per-scene custom prompt for regen */}
+                    {!readOnly && (
+                      <TextField
+                        label="Custom prompt for regen"
+                        value={customPrompts[result.scene_number] || ''}
+                        onChange={(e) => setCustomPrompts((p) => ({ ...p, [result.scene_number]: e.target.value }))}
+                        size="small"
+                        fullWidth
+                        multiline
+                        maxRows={3}
+                        disabled={isLoading}
+                        sx={{ mt: 1, '& .MuiInputBase-input': { fontSize: 12 } }}
+                        placeholder="Override prompt for this scene..."
+                      />
+                    )}
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+
+          <Button
+            variant="contained"
+            color="primary"
+            fullWidth
+            onClick={onContinue}
+            disabled={isLoading || readOnly}
+            endIcon={<ArrowForward />}
+            sx={{ mt: 3, py: 1.5 }}
+          >
+            Continue to Video Generation
+          </Button>
+        </>
+      )}
+      {/* Full-size preview dialog */}
+      <Dialog
+        open={!!previewUrl}
+        onClose={() => setPreviewUrl(null)}
+        maxWidth="md"
+        slotProps={{
+          paper: {
+            sx: { bgcolor: '#1a1a1a', position: 'relative', overflow: 'hidden' },
+          },
+        }}
       >
-        Continue to Video Generation
-      </Button>
+        <IconButton
+          onClick={() => setPreviewUrl(null)}
+          sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            color: 'white',
+            bgcolor: 'rgba(0,0,0,0.5)',
+            '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' },
+            zIndex: 1,
+          }}
+        >
+          <Close />
+        </IconButton>
+        {previewUrl && (
+          <Box
+            component="img"
+            src={previewUrl}
+            alt="Scene preview"
+            sx={{
+              display: 'block',
+              maxWidth: '90vw',
+              maxHeight: '85vh',
+              objectFit: 'contain',
+            }}
+          />
+        )}
+      </Dialog>
     </Box>
   );
 }

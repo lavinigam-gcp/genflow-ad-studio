@@ -31,6 +31,8 @@ interface PipelineState {
   setStoryboard: (results: StoryboardResult[]) => void;
   setVideos: (results: VideoResult[]) => void;
   selectVideoVariant: (sceneNumber: number, variantIndex: number, selectedPath: string) => void;
+  updateStoryboardScene: (sceneNumber: number, result: StoryboardResult) => void;
+  updateVideoScene: (sceneNumber: number, result: VideoResult) => void;
   setFinalVideo: (path: string) => void;
   addLog: (message: string, level: LogEntry['level']) => void;
   setLoading: (loading: boolean) => void;
@@ -80,6 +82,20 @@ export const usePipelineStore = create<PipelineState>((set) => ({
         r.scene_number === sceneNumber
           ? { ...r, selected_index: variantIndex, selected_video_path: selectedPath }
           : r,
+      ),
+    })),
+
+  updateStoryboardScene: (sceneNumber, result) =>
+    set((state) => ({
+      storyboardResults: state.storyboardResults.map((r) =>
+        r.scene_number === sceneNumber ? result : r,
+      ),
+    })),
+
+  updateVideoScene: (sceneNumber, result) =>
+    set((state) => ({
+      videoResults: state.videoResults.map((r) =>
+        r.scene_number === sceneNumber ? result : r,
       ),
     })),
 

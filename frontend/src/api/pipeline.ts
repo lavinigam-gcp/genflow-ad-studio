@@ -7,7 +7,9 @@ import type {
   AvatarGenerateOptions,
   Scene,
   StoryboardResult,
+  StoryboardGenerateOptions,
   VideoResult,
+  VideoGenerateOptions,
   Job,
   VideoScript,
   ScriptConfig,
@@ -61,10 +63,23 @@ export async function selectAvatar(
 export async function generateStoryboard(
   runId: string,
   scenes: Scene[],
+  options?: StoryboardGenerateOptions,
 ): Promise<{ status: string; results: StoryboardResult[] }> {
   return api.post<{ status: string; results: StoryboardResult[] }>(
     '/pipeline/storyboard',
-    { run_id: runId, scenes },
+    { run_id: runId, scenes, ...options },
+  );
+}
+
+export async function regenStoryboardScene(
+  runId: string,
+  sceneNumber: number,
+  scene: Scene,
+  options?: Omit<StoryboardGenerateOptions, 'custom_prompts'> & { custom_prompt?: string },
+): Promise<StoryboardResult> {
+  return api.post<StoryboardResult>(
+    '/pipeline/storyboard/regen-scene',
+    { run_id: runId, scene_number: sceneNumber, scene, ...options },
   );
 }
 
@@ -73,8 +88,7 @@ export async function generateVideo(
   scenesData: StoryboardResult[],
   scriptScenes: Scene[],
   avatarProfile: AvatarProfile,
-  seed?: number | null,
-  resolution?: string,
+  options?: VideoGenerateOptions,
 ): Promise<{ status: string; results: VideoResult[] }> {
   return api.post<{ status: string; results: VideoResult[] }>(
     '/pipeline/video',
@@ -83,8 +97,28 @@ export async function generateVideo(
       scenes_data: scenesData,
       script_scenes: scriptScenes,
       avatar_profile: avatarProfile,
-      ...(seed != null && { seed }),
-      ...(resolution && resolution !== '720p' && { resolution }),
+      ...options,
+    },
+  );
+}
+
+export async function regenVideoScene(
+  runId: string,
+  sceneNumber: number,
+  scene: Scene,
+  storyboardResult: StoryboardResult,
+  avatarProfile: AvatarProfile,
+  options?: VideoGenerateOptions,
+): Promise<{ status: string; result: VideoResult }> {
+  return api.post<{ status: string; result: VideoResult }>(
+    '/pipeline/video/regen-scene',
+    {
+      run_id: runId,
+      scene_number: sceneNumber,
+      scene,
+      storyboard_result: storyboardResult,
+      avatar_profile: avatarProfile,
+      ...options,
     },
   );
 }
