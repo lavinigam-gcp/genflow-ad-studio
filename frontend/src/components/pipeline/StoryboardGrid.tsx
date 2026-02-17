@@ -19,6 +19,7 @@ import {
   Skeleton,
   Dialog,
   Collapse,
+  CircularProgress,
 } from '@mui/material';
 import { ArrowForward, Refresh, ZoomIn, Close, ExpandMore, ExpandLess } from '@mui/icons-material';
 import QCBadge from '../qc/QCBadge';
@@ -26,12 +27,13 @@ import QCDetailPanel from '../qc/QCDetailPanel';
 import type { StoryboardResult, StoryboardGenerateOptions } from '../../types';
 import { usePipelineStore } from '../../store/pipelineStore';
 import ModelBadge from '../common/ModelBadge';
+import { DEFAULT_IMAGE_RESOLUTION, DEFAULT_STORYBOARD_QC_THRESHOLD, DEFAULT_MAX_REGEN_ATTEMPTS } from '../../constants/controls';
 
 interface StoryboardGridProps {
   results: StoryboardResult[];
   onContinue: () => void;
   onGenerate: (options?: StoryboardGenerateOptions) => void;
-  onRegenScene: (sceneNumber: number, options?: Omit<StoryboardGenerateOptions, 'custom_prompts'> & { custom_prompt?: string }) => void;
+  onRegenScene: (sceneNumber: number, options?: Omit<StoryboardGenerateOptions, 'custom_prompts'> & { custom_prompt?: string }) => Promise<void>;
   isLoading: boolean;
   readOnly?: boolean;
   totalScenes?: number;
@@ -48,13 +50,14 @@ export default function StoryboardGrid({
   totalScenes,
 }: StoryboardGridProps) {
   const aspectRatio = usePipelineStore((s) => s.aspectRatio);
-  const [imageResolution, setImageResolution] = useState('2K');
-  const [qcThreshold, setQcThreshold] = useState(60);
-  const [maxRegenAttempts, setMaxRegenAttempts] = useState(3);
+  const [imageResolution, setImageResolution] = useState(DEFAULT_IMAGE_RESOLUTION);
+  const [qcThreshold, setQcThreshold] = useState(DEFAULT_STORYBOARD_QC_THRESHOLD);
+  const [maxRegenAttempts, setMaxRegenAttempts] = useState(DEFAULT_MAX_REGEN_ATTEMPTS);
   const [includeCompositionQc, setIncludeCompositionQc] = useState(true);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [customPrompts, setCustomPrompts] = useState<Record<number, string>>({});
   const [expandedPrompts, setExpandedPrompts] = useState<Record<number, boolean>>({});
+  const [regenLoading, setRegenLoading] = useState<Record<number, boolean>>({});
 
   const hasResults = results.length > 0;
 
@@ -85,10 +88,15 @@ export default function StoryboardGrid({
     onGenerate(buildOptions());
   };
 
-  const handleRegenScene = (sceneNumber: number) => {
+  const handleRegenScene = async (sceneNumber: number) => {
     const { custom_prompts: _, ...rest } = buildOptions();
     const prompt = customPrompts[sceneNumber]?.trim();
-    onRegenScene(sceneNumber, { ...rest, ...(prompt ? { custom_prompt: prompt } : {}) });
+    setRegenLoading((prev) => ({ ...prev, [sceneNumber]: true }));
+    try {
+      await onRegenScene(sceneNumber, { ...rest, ...(prompt ? { custom_prompt: prompt } : {}) });
+    } finally {
+      setRegenLoading((prev) => ({ ...prev, [sceneNumber]: false }));
+    }
   };
 
   return (
@@ -135,9 +143,11 @@ export default function StoryboardGrid({
 
             {/* Storyboard Resolution */}
             <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
-                Storyboard Resolution
-              </Typography>
+              <Tooltip title="Image quality for scene frames. Higher resolution = sharper but slower generation." placement="top" arrow>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', cursor: 'help' }}>
+                  Storyboard Resolution
+                </Typography>
+              </Tooltip>
               <ToggleButtonGroup
                 value={imageResolution}
                 exclusive
@@ -155,9 +165,11 @@ export default function StoryboardGrid({
           {/* Row 2: QC threshold + Max regen attempts */}
           <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <Box sx={{ minWidth: 220 }}>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                QC Threshold: {qcThreshold}
-              </Typography>
+              <Tooltip title="Minimum quality score (0-100) to auto-accept. Frames below this are automatically regenerated." placement="top" arrow>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, cursor: 'help' }}>
+                  QC Threshold: {qcThreshold}
+                </Typography>
+              </Tooltip>
               <Slider
                 value={qcThreshold}
                 onChange={(_, value) => setQcThreshold(value as number)}
@@ -170,9 +182,11 @@ export default function StoryboardGrid({
             </Box>
 
             <Box sx={{ minWidth: 220 }}>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                Max Regen Attempts: {maxRegenAttempts}
-              </Typography>
+              <Tooltip title="Maximum times a scene regenerates if it fails QC. Higher = better quality, longer generation." placement="top" arrow>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, cursor: 'help' }}>
+                  Max Regen Attempts: {maxRegenAttempts}
+                </Typography>
+              </Tooltip>
               <Slider
                 value={maxRegenAttempts}
                 onChange={(_, value) => setMaxRegenAttempts(value as number)}
@@ -185,18 +199,21 @@ export default function StoryboardGrid({
               />
             </Box>
 
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={includeCompositionQc}
-                  onChange={(e) => setIncludeCompositionQc(e.target.checked)}
-                  disabled={isLoading}
-                />
-              }
-              label={
-                <Typography variant="body2">Include Composition QC</Typography>
-              }
-            />
+            <Tooltip title="Evaluate scene composition (rule of thirds, visual balance) in addition to avatar and product accuracy." placement="top" arrow>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={includeCompositionQc}
+                    onChange={(e) => setIncludeCompositionQc(e.target.checked)}
+                    disabled={isLoading}
+                  />
+                }
+                label={
+                  <Typography variant="body2">Include Composition QC</Typography>
+                }
+                sx={{ cursor: 'help' }}
+              />
+            </Tooltip>
           </Box>
 
           {/* Row 3: Generate button */}
@@ -257,7 +274,9 @@ export default function StoryboardGrid({
       {hasResults && (
         <>
           <Grid container spacing={3}>
-            {results.map((result, index) => (
+            {results.map((result, index) => {
+              const isSceneLoading = !!regenLoading[result.scene_number];
+              return (
               <Grid size={{ xs: 12, sm: 6, md: 4 }} key={result.scene_number}>
 
                 <Card sx={{
@@ -270,8 +289,24 @@ export default function StoryboardGrid({
                       height={220}
                       image={result.image_path}
                       alt={`Scene ${result.scene_number}`}
-                      sx={{ objectFit: 'contain' }}
+                      sx={{ objectFit: 'contain', opacity: isSceneLoading ? 0.4 : 1, transition: 'opacity 0.3s' }}
                     />
+                    {isSceneLoading && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <CircularProgress size={36} />
+                      </Box>
+                    )}
                     <Chip
                       label={`Scene ${result.scene_number}`}
                       size="small"
@@ -298,9 +333,8 @@ export default function StoryboardGrid({
                         <Chip
                           label={`${result.regen_attempts} regen`}
                           size="small"
+                          color="warning"
                           sx={{
-                            backgroundColor: 'rgba(232, 113, 10, 0.85)',
-                            color: 'common.white',
                             fontSize: 11,
                           }}
                         />
@@ -321,18 +355,20 @@ export default function StoryboardGrid({
                         </IconButton>
                       </Tooltip>
                       {!readOnly && (
-                        <Tooltip title="Regenerate scene">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleRegenScene(result.scene_number)}
-                            disabled={isLoading}
-                            sx={{
-                              bgcolor: 'background.paper',
-                              '&:hover': { bgcolor: 'background.paper' },
-                            }}
-                          >
-                            <Refresh fontSize="small" />
-                          </IconButton>
+                        <Tooltip title={isSceneLoading ? 'Regenerating...' : 'Regenerate scene'}>
+                          <span>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleRegenScene(result.scene_number)}
+                              disabled={isSceneLoading}
+                              sx={{
+                                bgcolor: 'background.paper',
+                                '&:hover': { bgcolor: 'background.paper' },
+                              }}
+                            >
+                              <Refresh fontSize="small" />
+                            </IconButton>
+                          </span>
                         </Tooltip>
                       )}
                     </Box>
@@ -417,7 +453,8 @@ export default function StoryboardGrid({
                   </CardContent>
                 </Card>
               </Grid>
-            ))}
+              );
+            })}
             {/* Skeleton placeholders for remaining scenes during progressive loading */}
             {isLoading && totalScenes && results.length < totalScenes &&
               Array.from({ length: totalScenes - results.length }).map((_, i) => (

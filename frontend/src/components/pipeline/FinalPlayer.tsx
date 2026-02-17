@@ -7,6 +7,8 @@ import {
   Chip,
 } from '@mui/material';
 import { Download, RateReview } from '@mui/icons-material';
+import { usePipelineStore } from '../../store/pipelineStore';
+import ModelBadge from '../common/ModelBadge';
 
 interface FinalPlayerProps {
   videoPath: string;
@@ -25,6 +27,7 @@ export default function FinalPlayer({
   isLoading,
   aspectRatio,
 }: FinalPlayerProps) {
+  const veoResolution = usePipelineStore((s) => s.veoResolution);
   const handleDownload = async () => {
     try {
       const response = await fetch(videoPath);
@@ -46,9 +49,12 @@ export default function FinalPlayer({
   return (
     <Card sx={{ maxWidth: 900, mx: 'auto' }}>
       <CardContent sx={{ p: 4 }}>
-        <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
-          Final Commercial
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+            Final Commercial
+          </Typography>
+          <ModelBadge />
+        </Box>
 
         <Box
           sx={{
@@ -72,7 +78,7 @@ export default function FinalPlayer({
         <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
           <Chip label={`${totalDuration}s duration`} variant="outlined" />
           <Chip label={`${scenesCount} scenes`} variant="outlined" />
-          <Chip label="1080p" variant="outlined" />
+          <Chip label={veoResolution} variant="outlined" />
           {aspectRatio && (
             <Chip
               label={aspectRatio === '16:9' ? '16:9 Landscape' : '9:16 Portrait'}

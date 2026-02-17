@@ -20,10 +20,10 @@ import {
   Skeleton,
   Collapse,
   FormControl,
-  InputLabel,
   Select,
   MenuItem,
   Switch,
+  CircularProgress,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import { ArrowForward, EmojiEvents, CheckCircle, Refresh, ExpandMore, ExpandLess } from '@mui/icons-material';
@@ -31,22 +31,20 @@ import QCBadge from '../qc/QCBadge';
 import QCDetailPanel from '../qc/QCDetailPanel';
 import type { VideoResult, VideoGenerateOptions } from '../../types';
 import { usePipelineStore } from '../../store/pipelineStore';
+import { VEO_MODELS, DEFAULT_NUM_VIDEO_VARIANTS, DEFAULT_VIDEO_QC_THRESHOLD, DEFAULT_MAX_VIDEO_QC_REGEN } from '../../constants/controls';
+import ModelBadge from '../common/ModelBadge';
 
 interface VideoPlayerProps {
   results: VideoResult[];
   onContinue: () => void;
   onGenerate: (options?: VideoGenerateOptions) => void;
   onSelectVariant?: (sceneNumber: number, variantIndex: number) => void;
-  onRegenScene?: (sceneNumber: number, options?: VideoGenerateOptions) => void;
+  onRegenScene?: (sceneNumber: number, options?: VideoGenerateOptions) => Promise<void>;
   isLoading: boolean;
   readOnly?: boolean;
   totalScenes?: number;
 }
 
-const VEO_MODELS = [
-  { id: 'veo-3.1-generate-preview', label: 'Veo 3.1 Preview', description: 'Standard — Best quality' },
-  { id: 'veo-3.1-fast-generate-preview', label: 'Veo 3.1 Fast Preview', description: 'Faster generation' },
-];
 
 function getOverallScore(report: NonNullable<import('../../types').VideoQCReport>): number {
   const scores = [
@@ -115,17 +113,23 @@ export default function VideoPlayer({
   const aspectRatio = usePipelineStore((s) => s.aspectRatio);
   const [veoModel, setVeoModel] = useState('veo-3.1-generate-preview');
   const [duration, setDuration] = useState('8');
-  const [resolution, setResolution] = useState('720p');
-  const [numVariants, setNumVariants] = useState(1);
+  const storeResolution = usePipelineStore((s) => s.veoResolution);
+  const [resolution, setResolutionLocal] = useState(storeResolution);
+  const setResolution = (v: string) => {
+    setResolutionLocal(v);
+    usePipelineStore.getState().setVeoResolution(v);
+  };
+  const [numVariants, setNumVariants] = useState(DEFAULT_NUM_VIDEO_VARIANTS);
   const [compression, setCompression] = useState('optimized');
   const [useReferenceImages, setUseReferenceImages] = useState(true);
-  const [qcThreshold, setQcThreshold] = useState(3);
-  const [maxQcRegen, setMaxQcRegen] = useState(2);
+  const [qcThreshold, setQcThreshold] = useState(DEFAULT_VIDEO_QC_THRESHOLD);
+  const [maxQcRegen, setMaxQcRegen] = useState(DEFAULT_MAX_VIDEO_QC_REGEN);
   const [negativePrompt, setNegativePrompt] = useState('');
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 2 ** 31).toString());
   const [generateAudio, setGenerateAudio] = useState(true);
   const [expandedPrompts, setExpandedPrompts] = useState<Record<number, boolean>>({});
   const [expandedQcContext, setExpandedQcContext] = useState<Record<number, boolean>>({});
+  const [regenLoading, setRegenLoading] = useState<Record<number, boolean>>({});
 
   const requires8s = useReferenceImages || resolution === '1080p' || resolution === '4K';
   const show4KWarning = resolution === '4K';
@@ -156,9 +160,12 @@ export default function VideoPlayer({
     <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h5" sx={{ fontWeight: 600 }}>
-          Video Generation
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+            Video Generation
+          </Typography>
+          <ModelBadge label={VEO_MODELS.find((m) => m.id === veoModel)?.label} />
+        </Box>
         {onSelectVariant && !readOnly && results.length > 0 && (
           <Typography variant="body2" color="text.secondary">
             Click a variant to select it for the final video
@@ -173,11 +180,14 @@ export default function VideoPlayer({
             {/* Row 1: Veo model, Aspect ratio chip, Duration */}
             <Grid container spacing={2} sx={{ alignItems: 'center' }}>
               <Grid size={{ xs: 12, sm: 4 }}>
+                <Tooltip title="Preview models support reference images for character consistency. GA models are production-stable." placement="top" arrow>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', cursor: 'help' }}>
+                    Veo Model
+                  </Typography>
+                </Tooltip>
                 <FormControl size="small" fullWidth>
-                  <InputLabel>Veo Model</InputLabel>
                   <Select
                     value={veoModel}
-                    label="Veo Model"
                     onChange={(e: SelectChangeEvent) => setVeoModel(e.target.value)}
                   >
                     {VEO_MODELS.map((m) => (
@@ -195,9 +205,11 @@ export default function VideoPlayer({
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
-                  Duration
-                </Typography>
+                <Tooltip title="Length of each scene clip. 8s required with reference images or resolution >= 1080p." placement="top" arrow>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', cursor: 'help' }}>
+                    Duration
+                  </Typography>
+                </Tooltip>
                 <ToggleButtonGroup
                   value={duration}
                   exclusive
@@ -215,9 +227,11 @@ export default function VideoPlayer({
             {/* Row 2: Resolution, Variants slider, Compression */}
             <Grid container spacing={2} sx={{ alignItems: 'center' }}>
               <Grid size={{ xs: 12, sm: 4 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
-                  Scene Resolution
-                </Typography>
+                <Tooltip title="Output video resolution. 1080p and 4K require 8s duration and take longer to generate." placement="top" arrow>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', cursor: 'help' }}>
+                    Scene Resolution
+                  </Typography>
+                </Tooltip>
                 <ToggleButtonGroup
                   value={resolution}
                   exclusive
@@ -231,9 +245,11 @@ export default function VideoPlayer({
                 </ToggleButtonGroup>
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
-                  Variants: {numVariants}
-                </Typography>
+                <Tooltip title="Video options generated per scene. Best variant is auto-selected by QC scoring." placement="top" arrow>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', cursor: 'help' }}>
+                    Variants: {numVariants}
+                  </Typography>
+                </Tooltip>
                 <Slider
                   value={numVariants}
                   onChange={(_, v) => setNumVariants(v as number)}
@@ -271,31 +287,39 @@ export default function VideoPlayer({
             {/* Row 3: Reference images, Audio toggle, QC threshold, Max QC regen */}
             <Grid container spacing={2} sx={{ alignItems: 'center' }}>
               <Grid size={{ xs: 12, sm: 4 }}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={useReferenceImages}
-                      onChange={(e) => setUseReferenceImages(e.target.checked)}
-                      size="small"
-                    />
-                  }
-                  label="Reference images (avatar + product consistency)"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={generateAudio}
-                      onChange={(e) => setGenerateAudio(e.target.checked)}
-                      size="small"
-                    />
-                  }
-                  label="Generate audio"
-                />
+                <Tooltip title="Pass avatar and product images for visual consistency. Requires Preview models and 8s duration." placement="top" arrow>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={useReferenceImages}
+                        onChange={(e) => setUseReferenceImages(e.target.checked)}
+                        size="small"
+                      />
+                    }
+                    label="Reference images (avatar + product consistency)"
+                    sx={{ cursor: 'help' }}
+                  />
+                </Tooltip>
+                <Tooltip title="AI-generated dialogue and sound design. Disable for scenes using custom audio in post-production." placement="top" arrow>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={generateAudio}
+                        onChange={(e) => setGenerateAudio(e.target.checked)}
+                        size="small"
+                      />
+                    }
+                    label="Generate audio"
+                    sx={{ cursor: 'help' }}
+                  />
+                </Tooltip>
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
-                  QC Threshold: {qcThreshold}
-                </Typography>
+                <Tooltip title="Minimum quality score (0-10) to auto-accept. Videos below this trigger prompt rewriting and regeneration." placement="top" arrow>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', cursor: 'help' }}>
+                    QC Threshold: {qcThreshold}
+                  </Typography>
+                </Tooltip>
                 <Slider
                   value={qcThreshold}
                   onChange={(_, v) => setQcThreshold(v as number)}
@@ -308,9 +332,11 @@ export default function VideoPlayer({
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
-                  Max QC Regen: {maxQcRegen}
-                </Typography>
+                <Tooltip title="Maximum regeneration attempts using QC feedback. Each attempt rewrites the prompt to fix detected issues." placement="top" arrow>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', cursor: 'help' }}>
+                    Max QC Regen: {maxQcRegen}
+                  </Typography>
+                </Tooltip>
                 <Slider
                   value={maxQcRegen}
                   onChange={(_, v) => setMaxQcRegen(v as number)}
@@ -327,8 +353,12 @@ export default function VideoPlayer({
             {/* Row 4: Negative prompt, Seed */}
             <Grid container spacing={2} sx={{ alignItems: 'center' }}>
               <Grid size={{ xs: 12, sm: 8 }}>
+                <Tooltip title="Elements to avoid in generated video (e.g., blurry, text overlay, watermark). Appended to global negatives." placement="top" arrow>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', cursor: 'help' }}>
+                    Negative Prompt (optional)
+                  </Typography>
+                </Tooltip>
                 <TextField
-                  label="Negative Prompt (optional)"
                   value={negativePrompt}
                   onChange={(e) => setNegativePrompt(e.target.value)}
                   size="small"
@@ -337,8 +367,12 @@ export default function VideoPlayer({
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
+                <Tooltip title="Random seed for reproducibility. Same seed + prompt = similar output. Shared across scenes for consistency." placement="top" arrow>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', cursor: 'help' }}>
+                    Seed (optional)
+                  </Typography>
+                </Tooltip>
                 <TextField
-                  label="Seed (optional)"
                   value={seed}
                   onChange={(e) => setSeed(e.target.value)}
                   size="small"
@@ -424,9 +458,8 @@ export default function VideoPlayer({
               <Chip
                 label={`${sceneResult.regen_attempts} QC regen`}
                 size="small"
+                color="warning"
                 sx={{
-                  backgroundColor: 'rgba(232, 113, 10, 0.85)',
-                  color: 'common.white',
                   fontSize: 11,
                   fontWeight: 600,
                 }}
@@ -442,14 +475,24 @@ export default function VideoPlayer({
               />
             )}
             {onRegenScene && !readOnly && (
-              <Tooltip title="Regenerate this scene using QC feedback from current result">
-                <IconButton
-                  size="small"
-                  onClick={() => onRegenScene(sceneResult.scene_number, buildOptions(controlValues))}
-                  sx={{ color: 'text.secondary' }}
-                >
-                  <Refresh fontSize="small" />
-                </IconButton>
+              <Tooltip title={regenLoading[sceneResult.scene_number] ? 'Regenerating...' : 'Regenerate this scene using QC feedback from current result'}>
+                <span>
+                  <IconButton
+                    size="small"
+                    disabled={!!regenLoading[sceneResult.scene_number]}
+                    onClick={async () => {
+                      setRegenLoading((prev) => ({ ...prev, [sceneResult.scene_number]: true }));
+                      try {
+                        await onRegenScene(sceneResult.scene_number, buildOptions(controlValues));
+                      } finally {
+                        setRegenLoading((prev) => ({ ...prev, [sceneResult.scene_number]: false }));
+                      }
+                    }}
+                    sx={{ color: 'text.secondary' }}
+                  >
+                    {regenLoading[sceneResult.scene_number] ? <CircularProgress size={16} /> : <Refresh fontSize="small" />}
+                  </IconButton>
+                </span>
               </Tooltip>
             )}
           </Box>

@@ -3,10 +3,11 @@ import { AutoAwesome } from '@mui/icons-material';
 import type { SxProps, Theme } from '@mui/material';
 
 interface ModelBadgeProps {
+  label?: string;
   sx?: SxProps<Theme>;
 }
 
-export default function ModelBadge({ sx }: ModelBadgeProps) {
+export default function ModelBadge({ label = 'Nano Banana Pro', sx }: ModelBadgeProps) {
   return (
     <Box
       sx={{
@@ -51,7 +52,7 @@ export default function ModelBadge({ sx }: ModelBadgeProps) {
           whiteSpace: 'nowrap',
         }}
       >
-        Nano Banana Pro
+        {label}
       </Typography>
     </Box>
   );

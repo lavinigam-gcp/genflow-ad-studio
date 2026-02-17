@@ -10,7 +10,6 @@ import {
   Skeleton,
   Slider,
   FormControl,
-  InputLabel,
   Select,
   MenuItem,
   TextField,
@@ -19,6 +18,7 @@ import {
   IconButton,
   ToggleButtonGroup,
   ToggleButton,
+  Tooltip,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 
@@ -30,17 +30,10 @@ import {
   Close,
 } from '@mui/icons-material';
 import type { AvatarVariant, AvatarGenerateOptions } from '../../types';
+import { ETHNICITIES, AGE_RANGES, DEFAULT_NUM_AVATAR_VARIANTS, DEFAULT_IMAGE_RESOLUTION } from '../../constants/controls';
 import { uploadImage } from '../../api/pipeline';
 import { usePipelineStore } from '../../store/pipelineStore';
 import ModelBadge from '../common/ModelBadge';
-
-const ETHNICITIES = [
-  '', 'South Asian', 'East Asian', 'Southeast Asian', 'Black', 'White',
-  'Latino', 'Middle Eastern', 'Mixed',
-];
-
-const AGE_RANGES = ['18-25', '25-35', '35-45', '45-55', '55+'];
-
 
 interface AvatarGalleryProps {
   variants: AvatarVariant[];
@@ -62,8 +55,8 @@ export default function AvatarGallery({
   readOnly = false,
 }: AvatarGalleryProps) {
   const aspectRatio = usePipelineStore((s) => s.aspectRatio);
-  const [imageResolution, setImageResolution] = useState('2K');
-  const [numVariants, setNumVariants] = useState(2);
+  const [imageResolution, setImageResolution] = useState(DEFAULT_IMAGE_RESOLUTION);
+  const [numVariants, setNumVariants] = useState(DEFAULT_NUM_AVATAR_VARIANTS);
   const [customPrompt, setCustomPrompt] = useState('');
   const [referenceImageUrl, setReferenceImageUrl] = useState('');
   const [uploadLoading, setUploadLoading] = useState(false);
@@ -130,9 +123,11 @@ export default function AvatarGallery({
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             {/* Aspect Ratio toggle */}
             <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
-                Aspect Ratio
-              </Typography>
+              <Tooltip title="Video frame shape. 9:16 for mobile (Reels, Shorts, TikTok). 16:9 for desktop (YouTube, web)." placement="top" arrow>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', cursor: 'help' }}>
+                  Aspect Ratio
+                </Typography>
+              </Tooltip>
               <ToggleButtonGroup
                 value={aspectRatio}
                 exclusive
@@ -157,9 +152,11 @@ export default function AvatarGallery({
 
             {/* Gender toggle */}
             <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
-                Gender
-              </Typography>
+              <Tooltip title="Auto uses the script's character profile. Override to specify male or female." placement="top" arrow>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', cursor: 'help' }}>
+                  Gender
+                </Typography>
+              </Tooltip>
               <ToggleButtonGroup
                 value={gender}
                 exclusive
@@ -174,45 +171,59 @@ export default function AvatarGallery({
             </Box>
 
             {/* Ethnicity */}
-            <FormControl size="small" sx={{ minWidth: 160 }}>
-              <InputLabel>Ethnicity</InputLabel>
-              <Select
-                value={ethnicity}
-                label="Ethnicity"
-                onChange={(e: SelectChangeEvent) => setEthnicity(e.target.value)}
-                disabled={isLoading}
-              >
-                <MenuItem value="">Auto (from script)</MenuItem>
-                {ETHNICITIES.filter(Boolean).map((e) => (
-                  <MenuItem key={e} value={e}>{e}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Box>
+              <Tooltip title="Auto uses the script's character description. Override to ensure specific representation." placement="top" arrow>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', cursor: 'help' }}>
+                  Ethnicity
+                </Typography>
+              </Tooltip>
+              <FormControl size="small" sx={{ minWidth: 160 }}>
+                <Select
+                  value={ethnicity}
+                  onChange={(e: SelectChangeEvent) => setEthnicity(e.target.value)}
+                  disabled={isLoading}
+                  displayEmpty
+                >
+                  <MenuItem value="">Auto (from script)</MenuItem>
+                  {ETHNICITIES.filter(Boolean).map((e) => (
+                    <MenuItem key={e} value={e}>{e}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
 
             {/* Age range */}
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>Age Range</InputLabel>
-              <Select
-                value={ageRange}
-                label="Age Range"
-                onChange={(e: SelectChangeEvent) => setAgeRange(e.target.value)}
-                disabled={isLoading}
-              >
-                <MenuItem value="">Auto (from script)</MenuItem>
-                {AGE_RANGES.map((a) => (
-                  <MenuItem key={a} value={a}>{a}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Box>
+              <Tooltip title="Auto uses the script's character description. Override to target a specific age demographic." placement="top" arrow>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', cursor: 'help' }}>
+                  Age Range
+                </Typography>
+              </Tooltip>
+              <FormControl size="small" sx={{ minWidth: 120 }}>
+                <Select
+                  value={ageRange}
+                  onChange={(e: SelectChangeEvent) => setAgeRange(e.target.value)}
+                  disabled={isLoading}
+                  displayEmpty
+                >
+                  <MenuItem value="">Auto (from script)</MenuItem>
+                  {AGE_RANGES.map((a) => (
+                    <MenuItem key={a} value={a}>{a}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
           </Box>
 
           {/* Model + Variants row */}
           <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             {/* Variants slider */}
             <Box sx={{ minWidth: 200 }}>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                Number of Variants: {numVariants}
-              </Typography>
+              <Tooltip title="How many avatar options to generate. More variants = more choices but longer generation." placement="top" arrow>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, cursor: 'help' }}>
+                  Number of Variants: {numVariants}
+                </Typography>
+              </Tooltip>
               <Slider
                 value={numVariants}
                 onChange={(_, value) => setNumVariants(value as number)}
@@ -227,9 +238,11 @@ export default function AvatarGallery({
 
             {/* Avatar Resolution */}
             <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
-                Avatar Resolution
-              </Typography>
+              <Tooltip title="Image quality for avatar portraits. 2K recommended. 4K is sharper but slower." placement="top" arrow>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', cursor: 'help' }}>
+                  Avatar Resolution
+                </Typography>
+              </Tooltip>
               <ToggleButtonGroup
                 value={imageResolution}
                 exclusive
@@ -245,17 +258,23 @@ export default function AvatarGallery({
           </Box>
 
           {/* Custom prompt */}
-          <TextField
-            label="Custom Prompt (optional)"
-            value={customPrompt}
-            onChange={(e) => setCustomPrompt(e.target.value)}
-            fullWidth
-            multiline
-            rows={2}
-            disabled={isLoading}
-            placeholder="Override the default avatar prompt..."
-            helperText="Leave empty to use the auto-generated prompt from the script"
-          />
+          <Box>
+            <Tooltip title="Completely replaces the auto-generated prompt. Use for precise character appearance control." placement="top" arrow>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', cursor: 'help' }}>
+                Custom Prompt (optional)
+              </Typography>
+            </Tooltip>
+            <TextField
+              value={customPrompt}
+              onChange={(e) => setCustomPrompt(e.target.value)}
+              fullWidth
+              multiline
+              rows={2}
+              disabled={isLoading}
+              placeholder="Override the default avatar prompt..."
+              helperText="Leave empty to use the auto-generated prompt from the script"
+            />
+          </Box>
 
           {/* Upload reference + Generate button row */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

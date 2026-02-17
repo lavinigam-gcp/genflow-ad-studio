@@ -59,7 +59,7 @@ export default function ReviewPanel({ job }: ReviewPanelProps) {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {job.video_results?.map((scene) => (
               <Card key={scene.scene_number}>
-                <Box sx={{ backgroundColor: '#000' }}>
+                <Box sx={{ backgroundColor: 'common.black' }}>
                   <video
                     src={scene.selected_video_path}
                     controls
@@ -86,7 +86,7 @@ export default function ReviewPanel({ job }: ReviewPanelProps) {
                 Final Commercial
               </Typography>
               <Card>
-                <Box sx={{ backgroundColor: '#000' }}>
+                <Box sx={{ backgroundColor: 'common.black' }}>
                   <video
                     src={job.final_video_path}
                     controls

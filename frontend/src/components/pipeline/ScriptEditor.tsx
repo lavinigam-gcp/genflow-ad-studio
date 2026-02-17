@@ -20,6 +20,9 @@ import {
 import type { VideoScript, Scene } from '../../types';
 import SceneCard from './SceneCard';
 import TransitionIndicator from './TransitionIndicator';
+import ModelBadge from '../common/ModelBadge';
+import { usePipelineStore } from '../../store/pipelineStore';
+import { GEMINI_MODELS } from '../../constants/controls';
 
 interface ScriptEditorProps {
   script: VideoScript | null;
@@ -40,6 +43,8 @@ export default function ScriptEditor({
   const [editJson, setEditJson] = useState(() => script ? JSON.stringify(script, null, 2) : '');
   const [editedScenes, setEditedScenes] = useState<Scene[]>(() => script ? [...script.scenes] : []);
   const [hasChanges, setHasChanges] = useState(false);
+  const originalRequest = usePipelineStore((s) => s.originalRequest);
+  const geminiModelLabel = GEMINI_MODELS.find((m) => m.id === originalRequest?.gemini_model)?.label;
 
   const handleModeChange = useCallback(
     (_: React.MouseEvent<HTMLElement>, newMode: 'view' | 'edit' | 'json' | null) => {
@@ -153,9 +158,12 @@ export default function ScriptEditor({
             mb: 3,
           }}
         >
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>
-            Generated Script
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              Generated Script
+            </Typography>
+            <ModelBadge label={geminiModelLabel} />
+          </Box>
           <ToggleButtonGroup
             value={mode}
             exclusive

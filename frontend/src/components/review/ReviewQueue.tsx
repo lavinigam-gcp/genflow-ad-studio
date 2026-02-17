@@ -36,7 +36,8 @@ export default function ReviewQueue({ reviews, onSelect, selectedId }: ReviewQue
         <Card
           key={job.job_id}
           sx={{
-            border: selectedId === job.job_id ? '2px solid #1A73E8' : '1px solid #DADCE0',
+            border: selectedId === job.job_id ? '2px solid' : '1px solid',
+            borderColor: selectedId === job.job_id ? 'primary.main' : 'divider',
           }}
         >
           <CardActionArea onClick={() => onSelect(job)}>

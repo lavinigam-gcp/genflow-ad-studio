@@ -44,9 +44,13 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Imagen 4 + Veo 3
 - Every prompt template field must be wired end-to-end: model field → service → template `.format()` — no phantom fields
 - Avatar demographic overrides (`override_gender`, `override_ethnicity`, `override_age_range`) replace `visual_description` with generic text to avoid conflicting prompt instructions
 - Append `?t={timestamp}` cache-buster to image paths on regeneration so browsers show fresh images
-- `ModelBadge` component (`components/common/ModelBadge.tsx`): "Nano Banana Pro" shimmer badge shown on Avatar + Storyboard screens
+- `ModelBadge` component (`components/common/ModelBadge.tsx`): shimmer badge with optional `label` prop (default "Nano Banana Pro") — shown on Script, Avatar, Storyboard, Video, and Final screens with model-specific labels
 - Video inside `CardActionArea`: wrap `<video>` container with `onClickCapture={(e) => e.stopPropagation()}` so native controls work
 - Don't `disabled={isLoading}` on per-scene interactive elements during progressive loading — only disable batch-level controls
+- Per-scene regen must show loading feedback: local `regenLoading: Record<number, boolean>` state + `CircularProgress` overlay + button disabled per-scene (never rely on global `isLoading`)
+- `onRegenScene` prop returns `Promise<void>` so components can `await` it and track per-scene loading
+- Tooltip on disabled MUI elements: wrap the disabled element in `<span>` so Tooltip can still attach pointer events
+- Shared UI constants live in `frontend/src/constants/controls.ts` — import from there, never inline
 
 ## Navigation Pattern (Optimistic)
 
@@ -97,6 +101,7 @@ frontend/
   src/
     api/     {client, pipeline}.ts
     types/   index.ts            # Must mirror backend models
+    constants/ controls.ts       # Shared UI constants (models, tones, defaults)
     store/   {pipeline, review, bulk}Store.ts
     components/ {pipeline/, review/, common/, layout/}
 ```

@@ -19,8 +19,8 @@ import {
   Select,
   MenuItem,
   FormControl,
-  InputLabel,
   Slider,
+  Tooltip,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import {
@@ -33,7 +33,8 @@ import {
   Image as ImageIcon,
   AutoFixHigh,
 } from '@mui/icons-material';
-import type { ScriptRequest, SampleProduct, GeminiModelOption } from '../../types';
+import type { ScriptRequest, SampleProduct } from '../../types';
+import { AD_TONES, GEMINI_MODELS } from '../../constants/controls';
 import {
   listSamples,
   uploadImage,
@@ -47,15 +48,6 @@ interface ProductFormProps {
   readOnly?: boolean;
   initialRequest?: ScriptRequest | null;
 }
-
-const AD_TONES = ['energetic', 'sophisticated', 'playful', 'authoritative', 'warm'];
-
-const GEMINI_MODELS: GeminiModelOption[] = [
-  { id: 'gemini-3-pro-preview', label: 'Gemini 3 Pro', description: 'Premium quality' },
-  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash', description: 'Fast & capable (default)' },
-  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', description: 'Stable' },
-  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Fastest' },
-];
 
 export default function ProductForm({ onSubmit, isLoading, readOnly = false, initialRequest }: ProductFormProps) {
   const [formData, setFormData] = useState<ScriptRequest>({
@@ -318,9 +310,11 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false, ini
 
         {/* Scene count — ToggleButtonGroup */}
         <Box sx={{ mb: 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-            Scene Count
-          </Typography>
+          <Tooltip title="Number of scenes in the ad. Each scene is ~8 seconds. More scenes = longer video." placement="top" arrow>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, cursor: 'help' }}>
+              Scene Count
+            </Typography>
+          </Tooltip>
           <ToggleButtonGroup
             value={formData.scene_count ?? 3}
             exclusive
@@ -553,9 +547,11 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false, ini
 
           {/* Generation settings */}
           <Box>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-              Ad Tone
-            </Typography>
+            <Tooltip title="Overall mood of the ad — affects dialogue style, music direction, and visual tone." placement="top" arrow>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, cursor: 'help' }}>
+                Ad Tone
+              </Typography>
+            </Tooltip>
             <ToggleButtonGroup
               value={formData.ad_tone ?? 'energetic'}
               exclusive
@@ -585,28 +581,35 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false, ini
             </ToggleButtonGroup>
           </Box>
 
-          <FormControl size="small" sx={{ maxWidth: 320 }}>
-            <InputLabel>Gemini Model</InputLabel>
-            <Select
-              value={formData.gemini_model ?? 'gemini-3-flash-preview'}
-              label="Gemini Model"
-              onChange={(e: SelectChangeEvent) =>
-                setFormData((prev) => ({ ...prev, gemini_model: e.target.value }))
-              }
-              disabled={isLoading || readOnly}
-            >
-              {GEMINI_MODELS.map((model) => (
-                <MenuItem key={model.id} value={model.id}>
-                  {model.label} — {model.description}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Box sx={{ maxWidth: 320 }}>
+            <Tooltip title="AI model for script generation. Pro = highest quality. Flash = faster generation." placement="top" arrow>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', cursor: 'help' }}>
+                Gemini Model
+              </Typography>
+            </Tooltip>
+            <FormControl size="small" fullWidth>
+              <Select
+                value={formData.gemini_model ?? 'gemini-3-flash-preview'}
+                onChange={(e: SelectChangeEvent) =>
+                  setFormData((prev) => ({ ...prev, gemini_model: e.target.value }))
+                }
+                disabled={isLoading || readOnly}
+              >
+                {GEMINI_MODELS.map((model) => (
+                  <MenuItem key={model.id} value={model.id}>
+                    {model.label} — {model.description}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
 
           <Box sx={{ maxWidth: 320 }}>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-              Max Dialogue Words / Scene: {formData.max_dialogue_words_per_scene ?? 15}
-            </Typography>
+            <Tooltip title="Maximum spoken words per scene. Keep low for punchier delivery — Veo renders dialogue literally." placement="top" arrow>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, cursor: 'help' }}>
+                Max Dialogue Words / Scene: {formData.max_dialogue_words_per_scene ?? 15}
+              </Typography>
+            </Tooltip>
             <Slider
               value={formData.max_dialogue_words_per_scene ?? 15}
               onChange={(_, value) =>
@@ -624,19 +627,24 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false, ini
             />
           </Box>
 
-          <TextField
-            label="Custom Instructions (optional)"
-            value={formData.custom_instructions || ''}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, custom_instructions: e.target.value }))
-            }
-            fullWidth
-            multiline
-            rows={3}
-            disabled={isLoading || readOnly}
-            placeholder="e.g. Focus on sustainability features, use humor, target Gen-Z audience..."
-            helperText="Additional creative direction for the AI script writer"
-          />
+          <Box>
+            <Tooltip title="Additional creative direction appended to the AI prompt. Use for brand guidelines, audience targeting, or style preferences." placement="top" arrow>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', cursor: 'help' }}>
+                Custom Instructions (optional)
+              </Typography>
+            </Tooltip>
+            <TextField
+              value={formData.custom_instructions || ''}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, custom_instructions: e.target.value }))
+              }
+              fullWidth
+              multiline
+              rows={3}
+              disabled={isLoading || readOnly}
+              placeholder="e.g. Focus on sustainability features, use humor, target Gen-Z audience..."
+            />
+          </Box>
 
           <Button
             type="submit"
