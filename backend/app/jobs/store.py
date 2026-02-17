@@ -44,7 +44,14 @@ class JobStore:
     def list_jobs(self) -> list[Job]:
         with self.db.connect() as conn:
             rows = conn.execute("SELECT * FROM jobs ORDER BY created_at DESC").fetchall()
-        return [self._row_to_job(r) for r in rows]
+        jobs: list[Job] = []
+        for r in rows:
+            try:
+                jobs.append(self._row_to_job(r))
+            except Exception as exc:
+                job_id = dict(r).get("job_id", "unknown")
+                logger.warning("Skipping corrupted job %s: %s", job_id, exc)
+        return jobs
 
     def update_job(self, job_id: str, **kwargs) -> Job:
         job = self.get_job(job_id)

@@ -9,11 +9,12 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Imagen 4 + Veo 3
 |---------|--------------|
 | `make dev` | Run backend (8000) + frontend (3000) |
 | `make stop` | Kill both servers |
-| `make check` | Type-check backend imports + frontend TSC |
-| `make test-api` | Smoke-test API (needs running backend) |
+| `make check` | Type-check backend imports + frontend TSC + validate assets |
+| `make test` | Full system test (starts servers, tests API + frontend + auth + assets) |
+| `make test-api` | Quick API smoke-test (needs running backend) |
 | `make setup` | Full first-time setup |
 | `make clean` | Remove venvs, node_modules, output |
-| `make reset-db` | Delete SQLite DB (fixes Pydantic errors after model changes) |
+| `make reset-db` | Delete SQLite DB + legacy job files (fixes schema errors) |
 | `make generate-samples` | Generate missing sample product images via AI |
 
 **Always run `make check` before finishing any task.**
@@ -55,6 +56,8 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Imagen 4 + Veo 3
 - `onRegenScene` prop returns `Promise<void>` so components can `await` it and track per-scene loading
 - Tooltip on disabled MUI elements: wrap the disabled element in `<span>` so Tooltip can still attach pointer events
 - Shared UI constants live in `frontend/src/constants/controls.ts` — import from there, never inline
+- Persisted Pydantic models (`VideoQCReport`, etc.) must use optional fields with defaults for backward compatibility — old SQLite data must still load after schema changes
+- `JobStore.list_jobs()` catches and skips corrupted rows — one bad job must not crash the history page
 
 ## Navigation Pattern (Optimistic)
 
@@ -82,7 +85,8 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Imagen 4 + Veo 3
 - **AppBar**: Centered logo + `ThemeToggle` (light/dark) top-right (`AppBar.tsx`)
 - **Floating nav sidebar**: Fixed vertical icon buttons on the left edge with tooltips (`MainLayout.tsx`)
 - **Stepper**: Horizontal pipeline progress below the header (`MainLayout.tsx`)
-- **InsightPanel**: Slide-out panel on right edge showing pipeline step progress (`InsightPanel.tsx`)
+- **InsightPanel**: Slide-out panel on right edge showing pipeline step progress + architecture diagrams per step (`InsightPanel.tsx`); expandable (360px ↔ 600px) via `OpenInFull`/`CloseFullscreen` toggle; click any diagram to open full-size overlay Dialog
+- **Pipeline Logs**: Floating resizable overlay (bottom-right, above FAB); drag top-left corner to resize; close button in header; auto-scrolls to latest logs (`MainLayout.tsx` `LogPanel` component)
 - **Main content**: Centered max-width 1400px area
 - Nav items defined in `MainLayout.tsx` `NAV_ITEMS` array — add icons from `@mui/icons-material`
 - Dark/light theme: MUI v7 `colorSchemes` + `cssVariables` in `theme.ts` — see frontend rules for details
@@ -91,7 +95,7 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Imagen 4 + Veo 3
 
 ```
 backend/
-  main.py                     # FastAPI app + route registration
+  main.py                     # FastAPI app + route registration + /asset static mount
   app/
     dependencies.py           # DI container (@lru_cache singletons)
     ai/    {gemini, gemini_image, imagen, veo, retry, prompts}.py
@@ -107,7 +111,16 @@ frontend/
     types/   index.ts            # Must mirror backend models
     constants/ controls.ts       # Shared UI constants (models, tones, defaults)
     store/   {pipeline, review, bulk}Store.ts
-    components/ {pipeline/, review/, common/, layout/}
+    components/ {pipeline/, review/, common/, layout/, pages/}
+scripts/
+  test_system.sh                # System test: API + frontend + proxies + auth (make test)
+asset/                          # Generated architecture diagrams (served at /asset/)
+  *.webp                        # 9 diagrams: pipeline-flow, system-architecture, product-input,
+                                #   script-generation, avatar-creation, storyboard-qc,
+                                #   video-continuity, ffmpeg-stitching, review-approval
+.docs/diagram-generator/
+  generate_diagrams.py          # CLI: generate diagrams via Gemini 3 Pro Image
+  prompts/*.json                # 9 JSON prompt specs (Nano Banana schema)
 ```
 
 ## Don'ts

@@ -47,16 +47,17 @@ interface VideoPlayerProps {
 
 
 function getOverallScore(report: NonNullable<import('../../types').VideoQCReport>): number {
-  const scores = [
-    report.technical_distortion.score,
-    report.cinematic_imperfections.score,
-    report.avatar_consistency.score,
-    report.product_consistency.score,
-    report.temporal_coherence.score,
-    report.hand_body_integrity.score,
-    report.brand_text_accuracy.score,
+  const dims = [
+    report.technical_distortion,
+    report.cinematic_imperfections,
+    report.avatar_consistency,
+    report.product_consistency,
+    report.temporal_coherence,
+    report.hand_body_integrity,
+    report.brand_text_accuracy,
   ];
-  return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  const scores = dims.filter((d) => d != null).map((d) => d.score);
+  return scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
 }
 
 function buildOptions(controls: {
@@ -543,42 +544,16 @@ export default function VideoPlayer({
                         />
                         <QCDetailPanel
                           dimensions={[
-                            {
-                              label: 'Technical',
-                              score: variant.qc_report.technical_distortion.score,
-                              reasoning: variant.qc_report.technical_distortion.reasoning,
-                            },
-                            {
-                              label: 'Cinematic',
-                              score: variant.qc_report.cinematic_imperfections.score,
-                              reasoning: variant.qc_report.cinematic_imperfections.reasoning,
-                            },
-                            {
-                              label: 'Avatar',
-                              score: variant.qc_report.avatar_consistency.score,
-                              reasoning: variant.qc_report.avatar_consistency.reasoning,
-                            },
-                            {
-                              label: 'Product',
-                              score: variant.qc_report.product_consistency.score,
-                              reasoning: variant.qc_report.product_consistency.reasoning,
-                            },
-                            {
-                              label: 'Temporal',
-                              score: variant.qc_report.temporal_coherence.score,
-                              reasoning: variant.qc_report.temporal_coherence.reasoning,
-                            },
-                            {
-                              label: 'Hands/Body',
-                              score: variant.qc_report.hand_body_integrity.score,
-                              reasoning: variant.qc_report.hand_body_integrity.reasoning,
-                            },
-                            {
-                              label: 'Brand/Text',
-                              score: variant.qc_report.brand_text_accuracy.score,
-                              reasoning: variant.qc_report.brand_text_accuracy.reasoning,
-                            },
-                          ]}
+                            { label: 'Technical', dim: variant.qc_report.technical_distortion },
+                            { label: 'Cinematic', dim: variant.qc_report.cinematic_imperfections },
+                            { label: 'Avatar', dim: variant.qc_report.avatar_consistency },
+                            { label: 'Product', dim: variant.qc_report.product_consistency },
+                            { label: 'Temporal', dim: variant.qc_report.temporal_coherence },
+                            { label: 'Hands/Body', dim: variant.qc_report.hand_body_integrity },
+                            { label: 'Brand/Text', dim: variant.qc_report.brand_text_accuracy },
+                          ]
+                            .filter((d) => d.dim != null)
+                            .map((d) => ({ label: d.label, score: d.dim!.score, reasoning: d.dim!.reasoning }))}
                         />
                       </>
                     )}

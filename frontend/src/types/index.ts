@@ -139,13 +139,13 @@ export interface VideoQCDimension {
 }
 
 export interface VideoQCReport {
-  technical_distortion: VideoQCDimension;
-  cinematic_imperfections: VideoQCDimension;
-  avatar_consistency: VideoQCDimension;
-  product_consistency: VideoQCDimension;
-  temporal_coherence: VideoQCDimension;
-  hand_body_integrity: VideoQCDimension;
-  brand_text_accuracy: VideoQCDimension;
+  technical_distortion?: VideoQCDimension;
+  cinematic_imperfections?: VideoQCDimension;
+  avatar_consistency?: VideoQCDimension;
+  product_consistency?: VideoQCDimension;
+  temporal_coherence?: VideoQCDimension;
+  hand_body_integrity?: VideoQCDimension;
+  brand_text_accuracy?: VideoQCDimension;
   overall_verdict: string;
 }
 

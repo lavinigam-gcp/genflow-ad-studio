@@ -72,15 +72,16 @@ class QCService:
     def video_passes_qc(self, report: VideoQCReport, threshold: int | None = None) -> bool:
         """Check if all video QC dimension scores meet the threshold."""
         threshold = threshold or self.settings.video_qc_threshold
-        return (
-            report.technical_distortion.score >= threshold
-            and report.cinematic_imperfections.score >= threshold
-            and report.avatar_consistency.score >= threshold
-            and report.product_consistency.score >= threshold
-            and report.temporal_coherence.score >= threshold
-            and report.hand_body_integrity.score >= threshold
-            and report.brand_text_accuracy.score >= threshold
-        )
+        dims = [
+            report.technical_distortion,
+            report.cinematic_imperfections,
+            report.avatar_consistency,
+            report.product_consistency,
+            report.temporal_coherence,
+            report.hand_body_integrity,
+            report.brand_text_accuracy,
+        ]
+        return all(d.score >= threshold for d in dims if d is not None)
 
     async def rewrite_prompt(self, original_prompt: str, qc_report: StoryboardQCReport) -> str:
         """Use Gemini to rewrite a prompt based on QC feedback."""
@@ -104,21 +105,19 @@ class QCService:
     @staticmethod
     def build_video_qc_feedback(qc_report: VideoQCReport) -> str:
         """Build a human-readable QC feedback string from a video QC report."""
-        feedback_parts: list[str] = [
-            f"Technical distortion score: {qc_report.technical_distortion.score}/10 - "
-            f"{qc_report.technical_distortion.reasoning}",
-            f"Cinematic imperfections score: {qc_report.cinematic_imperfections.score}/10 - "
-            f"{qc_report.cinematic_imperfections.reasoning}",
-            f"Avatar consistency score: {qc_report.avatar_consistency.score}/10 - "
-            f"{qc_report.avatar_consistency.reasoning}",
-            f"Product consistency score: {qc_report.product_consistency.score}/10 - "
-            f"{qc_report.product_consistency.reasoning}",
-            f"Temporal coherence score: {qc_report.temporal_coherence.score}/10 - "
-            f"{qc_report.temporal_coherence.reasoning}",
-            f"Hand/body integrity score: {qc_report.hand_body_integrity.score}/10 - "
-            f"{qc_report.hand_body_integrity.reasoning}",
-            f"Brand/text accuracy score: {qc_report.brand_text_accuracy.score}/10 - "
-            f"{qc_report.brand_text_accuracy.reasoning}",
+        dim_labels = [
+            ("Technical distortion", qc_report.technical_distortion),
+            ("Cinematic imperfections", qc_report.cinematic_imperfections),
+            ("Avatar consistency", qc_report.avatar_consistency),
+            ("Product consistency", qc_report.product_consistency),
+            ("Temporal coherence", qc_report.temporal_coherence),
+            ("Hand/body integrity", qc_report.hand_body_integrity),
+            ("Brand/text accuracy", qc_report.brand_text_accuracy),
+        ]
+        feedback_parts = [
+            f"{label} score: {dim.score}/10 - {dim.reasoning}"
+            for label, dim in dim_labels
+            if dim is not None
         ]
         return "\n".join(feedback_parts)
 
@@ -148,15 +147,16 @@ class QCService:
             if variant.qc_report is None:
                 continue
             r = variant.qc_report
-            score = (
-                r.avatar_consistency.score * 0.20
-                + r.product_consistency.score * 0.20
-                + r.hand_body_integrity.score * 0.15
-                + r.brand_text_accuracy.score * 0.15
-                + r.temporal_coherence.score * 0.10
-                + r.technical_distortion.score * 0.10
-                + r.cinematic_imperfections.score * 0.10
-            )
+            weighted = [
+                (r.avatar_consistency, 0.20),
+                (r.product_consistency, 0.20),
+                (r.hand_body_integrity, 0.15),
+                (r.brand_text_accuracy, 0.15),
+                (r.temporal_coherence, 0.10),
+                (r.technical_distortion, 0.10),
+                (r.cinematic_imperfections, 0.10),
+            ]
+            score = sum(d.score * w for d, w in weighted if d is not None)
             if score > best_score:
                 best_score = score
                 best_idx = variant.index

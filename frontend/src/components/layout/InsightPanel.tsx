@@ -7,26 +7,43 @@ import {
   Step,
   StepLabel,
   StepContent,
+  Dialog,
 } from '@mui/material';
-import { AutoAwesome, ChevronLeft, CheckCircle } from '@mui/icons-material';
+import { AutoAwesome, ChevronLeft, CheckCircle, OpenInFull, CloseFullscreen, Close } from '@mui/icons-material';
 import { usePipelineStore } from '../../store/pipelineStore';
 
+const DIAGRAM_MAP: Record<number, string> = {
+  0: 'product-input',
+  1: 'script-generation',
+  2: 'avatar-creation',
+  3: 'storyboard-qc',
+  4: 'video-continuity',
+  5: 'ffmpeg-stitching',
+  6: 'review-approval',
+};
+
 const PIPELINE_STEPS = [
-  { label: 'Input', description: 'Analyzing product image and specifications' },
-  { label: 'Script', description: 'AI composing cinematic video script with Gemini' },
-  { label: 'Avatar', description: 'Generating photorealistic presenter from script' },
-  { label: 'Storyboard', description: 'Creating scene-by-scene storyboard images with QC' },
-  { label: 'Video', description: 'Veo 3.1 generating video clips per scene' },
-  { label: 'Stitch', description: 'FFmpeg compositing scenes into final commercial' },
-  { label: 'Review', description: 'Ready for human review and approval' },
+  { label: 'Input', description: 'Analyzing product image and extracting specifications via Gemini 3 Flash' },
+  { label: 'Script', description: 'Gemini 3 Pro composing cinematic script with narrative arc and scene directions' },
+  { label: 'Avatar', description: 'Generating photorealistic presenter variants via Gemini 3 Pro Image or Imagen 4' },
+  { label: 'Storyboard', description: 'Creating scene frames with QC feedback loop \u2014 generate, evaluate, refine' },
+  { label: 'Video', description: 'Veo 3.1 generating clips with scene continuity and 7-dimension QC scoring' },
+  { label: 'Stitch', description: 'FFmpeg compositing with transitions, CFR conversion, and audio normalization' },
+  { label: 'Review', description: 'Final commercial ready for human review, approval, or revision' },
 ];
+
+const PANEL_WIDTH_NORMAL = 360;
+const PANEL_WIDTH_EXPANDED = 600;
 
 export default function InsightPanel() {
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const activeStep = usePipelineStore((s) => s.activeStep);
   const isLoading = usePipelineStore((s) => s.isLoading);
 
   const currentLabel = PIPELINE_STEPS[activeStep]?.label ?? 'Pipeline';
+  const panelWidth = expanded ? PANEL_WIDTH_EXPANDED : PANEL_WIDTH_NORMAL;
 
   return (
     <>
@@ -82,14 +99,14 @@ export default function InsightPanel() {
           right: 0,
           top: 0,
           bottom: 0,
-          width: 360,
+          width: panelWidth,
           zIndex: 1301,
           backgroundColor: 'background.paper',
           borderLeft: '1px solid',
           borderColor: 'divider',
           boxShadow: open ? '-8px 0 24px rgba(0,0,0,0.12)' : 'none',
           transform: open ? 'translateX(0)' : 'translateX(100%)',
-          transition: 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s ease',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -111,6 +128,9 @@ export default function InsightPanel() {
           <Typography variant="subtitle1" sx={{ flex: 1, fontWeight: 600 }}>
             Pipeline Progress
           </Typography>
+          <IconButton size="small" onClick={() => setExpanded((prev) => !prev)}>
+            {expanded ? <CloseFullscreen sx={{ fontSize: 18 }} /> : <OpenInFull sx={{ fontSize: 18 }} />}
+          </IconButton>
           <IconButton size="small" onClick={() => setOpen(false)}>
             <ChevronLeft sx={{ transform: 'rotate(180deg)' }} />
           </IconButton>
@@ -153,6 +173,7 @@ export default function InsightPanel() {
             {PIPELINE_STEPS.map((step, index) => {
               const isCompleted = index < activeStep;
               const isCurrent = index === activeStep;
+              const diagramName = DIAGRAM_MAP[index];
 
               return (
                 <Step key={step.label} completed={isCompleted}>
@@ -188,24 +209,39 @@ export default function InsightPanel() {
                         }}
                       />
                     )}
-                    <Box
-                      sx={{
-                        mt: 1,
-                        p: 2,
-                        borderRadius: 2,
-                        backgroundColor: 'action.hover',
-                        border: '1px dashed',
-                        borderColor: 'divider',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minHeight: 60,
-                      }}
-                    >
-                      <Typography variant="caption" color="text.secondary">
-                        Pipeline diagram placeholder
-                      </Typography>
-                    </Box>
+                    {diagramName ? (
+                      <Box
+                        component="img"
+                        src={`/asset/${diagramName}.webp`}
+                        alt={`${step.label} diagram`}
+                        onClick={() => setPreviewSrc(`/asset/${diagramName}.webp`)}
+                        sx={{
+                          mt: 1,
+                          width: '100%',
+                          borderRadius: 1,
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          cursor: 'pointer',
+                          transition: 'opacity 0.2s',
+                          '&:hover': { opacity: 0.85 },
+                        }}
+                      />
+                    ) : (
+                      <Box
+                        sx={{
+                          mt: 1,
+                          p: 2,
+                          borderRadius: 2,
+                          backgroundColor: 'action.hover',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          {step.description}
+                        </Typography>
+                      </Box>
+                    )}
                   </StepContent>
                 </Step>
               );
@@ -213,6 +249,52 @@ export default function InsightPanel() {
           </Stepper>
         </Box>
       </Box>
+
+      {/* Full-size image preview dialog — zIndex must exceed panel (1301) */}
+      <Dialog
+        open={!!previewSrc}
+        onClose={() => setPreviewSrc(null)}
+        maxWidth={false}
+        sx={{ zIndex: 1400 }}
+        slotProps={{
+          paper: {
+            sx: {
+              bgcolor: 'background.paper',
+              maxWidth: '95vw',
+              maxHeight: '95vh',
+              position: 'relative',
+            },
+          },
+        }}
+      >
+        <IconButton
+          onClick={() => setPreviewSrc(null)}
+          sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            bgcolor: 'background.paper',
+            boxShadow: 1,
+            '&:hover': { bgcolor: 'action.hover' },
+          }}
+          size="small"
+        >
+          <Close fontSize="small" />
+        </IconButton>
+        {previewSrc && (
+          <Box
+            component="img"
+            src={previewSrc}
+            alt="Diagram preview"
+            sx={{
+              display: 'block',
+              maxWidth: '95vw',
+              maxHeight: '95vh',
+              objectFit: 'contain',
+            }}
+          />
+        )}
+      </Dialog>
     </>
   );
 }

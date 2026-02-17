@@ -99,6 +99,7 @@ class VeoService:
             person_generation=person_gen,
             output_gcs_uri=output_gcs_uri,
             resolution=resolution,
+            compression_quality=compression_quality,
         )
 
         if seed is not None:

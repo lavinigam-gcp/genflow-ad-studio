@@ -61,6 +61,11 @@ output_path = _backend_dir / "output"
 output_path.mkdir(exist_ok=True)
 app.mount("/output", StaticFiles(directory=str(output_path)), name="output")
 
+# Serve project-root asset/ directory (generated diagrams, static assets)
+_asset_path = _backend_dir.parent / "asset"
+_asset_path.mkdir(exist_ok=True)
+app.mount("/asset", StaticFiles(directory=str(_asset_path)), name="asset")
+
 # Register routers
 app.include_router(health_router)
 app.include_router(pipeline.router)

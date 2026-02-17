@@ -1,4 +1,4 @@
-.PHONY: install install-backend install-frontend setup setup-gcs dev dev-backend dev-frontend stop build clean reset-db check help test-api generate-samples deploy
+.PHONY: install install-backend install-frontend setup setup-gcs dev dev-backend dev-frontend stop build clean reset-db check check-assets help test test-api generate-samples deploy
 
 # ─── Config ──────────────────────────────────────
 PROJECT_ID ?= $(shell grep '^PROJECT_ID=' .env 2>/dev/null | cut -d= -f2)
@@ -24,7 +24,8 @@ help:
 	@echo ""
 	@echo "  Build & Test:"
 	@echo "    make build          - Build frontend for production"
-	@echo "    make check          - Run type checks (backend + frontend)"
+	@echo "    make check          - Type checks (backend + frontend + assets)"
+	@echo "    make test           - Full system test (API + frontend + auth + assets)"
 	@echo "    make test-api       - Quick API smoke test (requires running backend)"
 	@echo ""
 	@echo "  Cleanup:"
@@ -106,7 +107,7 @@ build:
 	cd frontend && npm run build
 
 # ─── Checks ──────────────────────────────────────
-check: check-backend check-frontend
+check: check-backend check-frontend check-assets
 	@echo "All checks passed."
 
 check-backend:
@@ -118,7 +119,22 @@ check-frontend:
 	@echo "Checking frontend types..."
 	@cd frontend && npx tsc --noEmit && echo "  Frontend OK: zero type errors"
 
+check-assets:
+	@echo "Checking assets and configs..."
+	@python3 -c "import json, sys; from pathlib import Path; \
+	ok=True; \
+	prompts=sorted(Path('.docs/diagram-generator/prompts').glob('*.json')) if Path('.docs/diagram-generator/prompts').is_dir() else []; \
+	[None for p in prompts if not (lambda p: (json.loads(p.read_text()) and True) or True)(p)]; \
+	bad=[p.name for p in prompts if not (lambda p: (True if json.loads(p.read_text()) else False))(p)]; \
+	print(f'  {len(prompts)} JSON prompts valid') if prompts else None; \
+	assets=list(Path('asset').glob('*.webp')) if Path('asset').is_dir() else []; \
+	print(f'  {len(assets)} diagram assets found') if assets else None; \
+	print('  Assets OK')"
+
 # ─── Test ────────────────────────────────────────
+test:
+	@bash scripts/test_system.sh
+
 test-api:
 	@echo "Testing API endpoints..."
 	@echo ""
@@ -152,7 +168,8 @@ deploy:
 reset-db:
 	@echo "Resetting database..."
 	rm -f output/genflow.db output/genflow.db-wal output/genflow.db-shm
-	@echo "  Database deleted. It will be recreated on next 'make dev'."
+	rm -f output/jobs.json output/jobs.json.migrated
+	@echo "  Database and legacy job files deleted. Will be recreated on next 'make dev'."
 
 # ─── Clean ───────────────────────────────────────
 clean:

@@ -29,14 +29,21 @@ class VideoQCDimension(BaseModel):
 
 
 class VideoQCReport(BaseModel):
-    technical_distortion: VideoQCDimension
-    cinematic_imperfections: VideoQCDimension
-    avatar_consistency: VideoQCDimension
-    product_consistency: VideoQCDimension
-    temporal_coherence: VideoQCDimension
-    hand_body_integrity: VideoQCDimension
-    brand_text_accuracy: VideoQCDimension
-    overall_verdict: str
+    """Video QC report with 7 scoring dimensions.
+
+    All dimensions are optional with None defaults for backward compatibility —
+    old job data persisted before a dimension was added can still be loaded.
+    """
+    model_config = {"extra": "ignore"}
+
+    technical_distortion: VideoQCDimension | None = None
+    cinematic_imperfections: VideoQCDimension | None = None
+    avatar_consistency: VideoQCDimension | None = None
+    product_consistency: VideoQCDimension | None = None
+    temporal_coherence: VideoQCDimension | None = None
+    hand_body_integrity: VideoQCDimension | None = None
+    brand_text_accuracy: VideoQCDimension | None = None
+    overall_verdict: str = ""
 
 
 class VideoVariant(BaseModel):

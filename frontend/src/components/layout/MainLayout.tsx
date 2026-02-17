@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Box,
   Stepper,
@@ -9,7 +9,6 @@ import {
   Tooltip,
   Typography,
   IconButton,
-  Drawer,
   Fab,
   Badge,
 } from '@mui/material';
@@ -101,6 +100,91 @@ function StepIcon({
       }}
     >
       {icon}
+    </Box>
+  );
+}
+
+const LOG_MIN_W = 320;
+const LOG_MIN_H = 200;
+const LOG_DEFAULT_W = 480;
+const LOG_DEFAULT_H = 320;
+
+function LogPanel({ children }: { children: React.ReactNode }) {
+  const [size, setSize] = useState({ w: LOG_DEFAULT_W, h: LOG_DEFAULT_H });
+  const dragRef = useRef<{ startX: number; startY: number; startW: number; startH: number } | null>(null);
+
+  const onMouseMove = useCallback((e: MouseEvent) => {
+    if (!dragRef.current) return;
+    const { startX, startY, startW, startH } = dragRef.current;
+    const maxW = window.innerWidth * 0.9;
+    const maxH = window.innerHeight * 0.7;
+    const newW = Math.min(maxW, Math.max(LOG_MIN_W, startW + (startX - e.clientX)));
+    const newH = Math.min(maxH, Math.max(LOG_MIN_H, startH + (startY - e.clientY)));
+    setSize({ w: newW, h: newH });
+  }, []);
+
+  const onMouseUp = useCallback(() => {
+    dragRef.current = null;
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+  }, [onMouseMove]);
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    dragRef.current = { startX: e.clientX, startY: e.clientY, startW: size.w, startH: size.h };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'nwse-resize';
+  }, [size.w, size.h, onMouseMove, onMouseUp]);
+
+  return (
+    <Box
+      sx={{
+        position: 'fixed',
+        right: 16,
+        bottom: 80,
+        width: size.w,
+        height: size.h,
+        zIndex: 1200,
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: 'background.paper',
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 2,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Top-left resize handle */}
+      <Box
+        onMouseDown={onMouseDown}
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: 16,
+          height: 16,
+          cursor: 'nwse-resize',
+          zIndex: 1,
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: 3,
+            left: 3,
+            width: 8,
+            height: 8,
+            borderTop: '2px solid',
+            borderLeft: '2px solid',
+            borderColor: 'text.disabled',
+            borderRadius: '2px 0 0 0',
+          },
+        }}
+      />
+      {children}
     </Box>
   );
 }
@@ -325,76 +409,66 @@ export default function MainLayout() {
         </Badge>
       </Fab>
 
-      {/* Log Drawer */}
-      <Drawer
-        anchor="right"
-        open={logPanelOpen}
-        onClose={() => setLogPanelOpen(false)}
-        variant="persistent"
-        sx={{
-          '& .MuiDrawer-paper': {
-            width: 400,
-            borderLeft: '1px solid',
-            borderColor: 'divider',
-          },
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', backgroundColor: 'action.hover' }}>
-          <Terminal sx={{ fontSize: 18, color: 'text.secondary', mr: 1 }} />
-          <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 600 }}>
-            Pipeline Logs ({logs.length})
-          </Typography>
-          <IconButton size="small" onClick={() => setLogPanelOpen(false)}>
-            <Close fontSize="small" />
-          </IconButton>
-        </Box>
-        <Box
-          ref={logScrollRef}
-          sx={{
-            flex: 1,
-            overflow: 'auto',
-            px: 2,
-            py: 1,
-            backgroundColor: 'background.default',
-            fontFamily: '"Roboto Mono", monospace',
-            fontSize: 13,
-            lineHeight: 1.8,
-          }}
-        >
-          {logs.length === 0 ? (
-            <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: '"Roboto Mono", monospace' }}>
-              No logs yet
+      {/* Floating log panel */}
+      {logPanelOpen && (
+        <LogPanel>
+          <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', backgroundColor: 'action.hover' }}>
+            <Terminal sx={{ fontSize: 18, color: 'text.secondary', mr: 1 }} />
+            <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 600 }}>
+              Pipeline Logs ({logs.length})
             </Typography>
-          ) : (
-            logs.map((log, i) => (
-              <Box key={i} sx={{ display: 'flex', gap: 1 }}>
-                <Typography
-                  component="span"
-                  sx={{
-                    color: 'text.disabled',
-                    fontFamily: '"Roboto Mono", monospace',
-                    fontSize: 13,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  [{new Date(log.timestamp).toLocaleTimeString('en-US', { hour12: false })}]
-                </Typography>
-                <Typography
-                  component="span"
-                  sx={{
-                    color: logLevelColor(log.level),
-                    fontFamily: '"Roboto Mono", monospace',
-                    fontSize: 13,
-                    wordBreak: 'break-word',
-                  }}
-                >
-                  {log.message}
-                </Typography>
-              </Box>
-            ))
-          )}
-        </Box>
-      </Drawer>
+            <IconButton size="small" onClick={() => setLogPanelOpen(false)}>
+              <Close fontSize="small" />
+            </IconButton>
+          </Box>
+          <Box
+            ref={logScrollRef}
+            sx={{
+              flex: 1,
+              overflow: 'auto',
+              px: 2,
+              py: 1,
+              backgroundColor: 'background.default',
+              fontFamily: '"Roboto Mono", monospace',
+              fontSize: 13,
+              lineHeight: 1.8,
+            }}
+          >
+            {logs.length === 0 ? (
+              <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: '"Roboto Mono", monospace' }}>
+                No logs yet
+              </Typography>
+            ) : (
+              logs.map((log, i) => (
+                <Box key={i} sx={{ display: 'flex', gap: 1 }}>
+                  <Typography
+                    component="span"
+                    sx={{
+                      color: 'text.disabled',
+                      fontFamily: '"Roboto Mono", monospace',
+                      fontSize: 13,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    [{new Date(log.timestamp).toLocaleTimeString('en-US', { hour12: false })}]
+                  </Typography>
+                  <Typography
+                    component="span"
+                    sx={{
+                      color: logLevelColor(log.level),
+                      fontFamily: '"Roboto Mono", monospace',
+                      fontSize: 13,
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {log.message}
+                  </Typography>
+                </Box>
+              ))
+            )}
+          </Box>
+        </LogPanel>
+      )}
     </Box>
   );
 }
