@@ -28,8 +28,11 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Imagen 4 + Veo 3
 - Veo outputs VFR video — always preprocess to 24fps CFR before stitching
 - QC feedback loop: generate → QC score → rewrite prompt → regenerate (max 3 attempts); manual regen auto-carries `previous_qc_report` for QC-informed prompt rewriting
 - SSE events: add to `SSEEventType` enum + backend `broadcaster.emit()` + frontend `useSSE` handler
-- SSE progressive loading: interactive mode uses SSE side-channel (`openSceneProgressSSE` in `usePipeline.ts`) alongside POST for incremental scene rendering
-- SSE named events require `addEventListener('scene_progress', handler)` — `onmessage` only fires for unnamed events
+- SSE progressive loading: interactive mode uses SSE side-channel (`openSceneProgressSSE` in `usePipeline.ts`) alongside POST for incremental scene rendering + real-time backend log streaming
+- SSE named events require `addEventListener('scene_progress', handler)` and `addEventListener('log', handler)` — `onmessage` only fires for unnamed events
+- SSE log streaming: `SSELogHandler` (`utils/sse_log_handler.py`) bridges Python `logger.*()` calls → SSE `LOG` events via `pipeline_run_id` context var — all backend logs auto-stream to frontend log panel
+- SSE stream endpoint (`/api/v1/jobs/{id}/stream`) accepts any run_id — does NOT require job to exist in DB (interactive pipeline uses pre-generated run_ids)
+- `ScriptRequest.run_id`: optional pre-generated run_id so SSE log channel can open before the POST; script service uses it if provided, else generates one
 - `image_url` accepts local `/output/...` paths — services detect prefix and read from disk
 - Video duration = user-selectable 4/6/8s (8s auto-enforced when reference images or resolution ≥ 1080p)
 - `generate_audio` toggle: configurable via VideoPlayer Switch (default True), flows through entire backend chain
@@ -96,7 +99,7 @@ backend/
     services/ {pipeline, script, avatar, storyboard, video, stitch, qc, review, bulk, input}_service.py
     api/    {pipeline, jobs, bulk, review, assets, health, config_api, input}.py
     jobs/   {store, runner, events}.py
-    utils/  {ffmpeg, csv_parser, json_parser}.py
+    utils/  {ffmpeg, csv_parser, json_parser, sse_log_handler}.py
 frontend/
   public/                     # Static assets (logo, favicons, web manifest)
   src/

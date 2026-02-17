@@ -63,11 +63,18 @@ class SSEBroadcaster:
           data: <json_data>
 
         Terminates when a JOB_COMPLETED or JOB_FAILED event is received.
+        Sends SSE comments as keepalive every 15s to prevent proxy timeouts.
         """
         queue = self.subscribe(job_id)
         try:
             while True:
-                event: SSEEvent = await queue.get()
+                try:
+                    event: SSEEvent = await asyncio.wait_for(queue.get(), timeout=15.0)
+                except asyncio.TimeoutError:
+                    # Send SSE comment as keepalive
+                    yield ": keepalive\n\n"
+                    continue
+
                 event_data = {
                     "job_id": event.job_id,
                     "timestamp": event.timestamp.isoformat(),

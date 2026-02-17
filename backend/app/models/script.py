@@ -10,6 +10,7 @@ class ScriptRequest(BaseModel):
     gemini_model: str | None = None
     max_dialogue_words_per_scene: int = Field(default=25, ge=10, le=50)
     custom_instructions: str = Field(default="")
+    run_id: str | None = None  # Pre-generated run_id for SSE log streaming
 
 
 class AvatarProfile(BaseModel):

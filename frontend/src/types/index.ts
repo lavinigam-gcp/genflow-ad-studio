@@ -7,6 +7,7 @@ export interface ScriptRequest {
   gemini_model?: string;
   max_dialogue_words_per_scene?: number;
   custom_instructions?: string;
+  run_id?: string;
 }
 
 export interface AvatarProfile {

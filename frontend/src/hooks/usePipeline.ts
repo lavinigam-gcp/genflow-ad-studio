@@ -29,6 +29,18 @@ function openSceneProgressSSE(
       // Ignore parse errors
     }
   });
+  // Stream backend logs into the frontend log console
+  es.addEventListener('log', (e: MessageEvent) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (typeof data.message === 'string') {
+        const level = (data.level as 'info' | 'success' | 'error' | 'warn' | 'dim') || 'dim';
+        usePipelineStore.getState().addLog(data.message, level);
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  });
   // Suppress connection errors (SSE will auto-reconnect, and we close it
   // when the POST completes anyway)
   es.onerror = () => {};
@@ -48,9 +60,15 @@ export function usePipeline() {
       usePipelineStore.setState({ originalRequest: request });
       store.addLog(`Starting script generation (model: ${request.gemini_model || 'gemini-3-flash-preview'})...`, 'info');
 
+      // Pre-generate run_id so we can open SSE log channel before the POST
+      const preRunId = request.run_id || Math.random().toString(36).slice(2, 14);
+      const requestWithRunId = { ...request, run_id: preRunId };
+      store.setRunId(preRunId);
+      const es = openSceneProgressSSE(preRunId, () => {});
+
       try {
         const t0 = Date.now();
-        const response = await pipelineApi.generateScript(request);
+        const response = await pipelineApi.generateScript(requestWithRunId);
         store.setRunId(response.run_id);
         store.setScript(response.script);
         const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
@@ -62,6 +80,7 @@ export function usePipeline() {
         // Navigate back to input step on error so user can retry
         store.setStep(0);
       } finally {
+        es.close();
         store.setLoading(false);
       }
     },
@@ -79,6 +98,7 @@ export function usePipeline() {
     store.setError(null);
     store.addLog('Generating avatar variants...', 'info');
 
+    const es = openSceneProgressSSE(runId, () => {});
     try {
       const response = await pipelineApi.generateAvatars(
         runId,
@@ -98,6 +118,7 @@ export function usePipeline() {
       store.setError(message);
       store.addLog(message, 'error');
     } finally {
+      es.close();
       store.setLoading(false);
     }
   }, [store]);
@@ -172,6 +193,7 @@ export function usePipeline() {
     store.setError(null);
     store.addLog(`Regenerating storyboard for scene ${sceneNumber}...`, 'info');
 
+    const es = openSceneProgressSSE(runId, () => {});
     try {
       const result = await pipelineApi.regenStoryboardScene(runId, sceneNumber, scene, options);
       // Cache-bust the image path
@@ -183,6 +205,8 @@ export function usePipeline() {
       const message = err instanceof Error ? err.message : `Failed to regen scene ${sceneNumber}`;
       store.setError(message);
       store.addLog(message, 'error');
+    } finally {
+      es.close();
     }
   }, [store]);
 
@@ -251,6 +275,7 @@ export function usePipeline() {
       'info',
     );
 
+    const es = openSceneProgressSSE(runId, () => {});
     try {
       const response = await pipelineApi.regenVideoScene(
         runId,
@@ -267,6 +292,8 @@ export function usePipeline() {
       const message = err instanceof Error ? err.message : `Failed to regen video scene ${sceneNumber}`;
       store.setError(message);
       store.addLog(message, 'error');
+    } finally {
+      es.close();
     }
   }, [store]);
 
@@ -285,6 +312,7 @@ export function usePipeline() {
         transition_duration: s.transition_duration ?? 0.5,
       }));
 
+    const es = openSceneProgressSSE(runId, () => {});
     try {
       const t0 = Date.now();
       const response = await pipelineApi.stitchVideo(runId, transitions);
@@ -297,6 +325,7 @@ export function usePipeline() {
       store.setError(message);
       store.addLog(message, 'error');
     } finally {
+      es.close();
       store.setLoading(false);
     }
   }, [store]);

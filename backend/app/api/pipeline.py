@@ -34,6 +34,7 @@ from app.services.script_service import ScriptService
 from app.services.stitch_service import StitchService
 from app.services.storyboard_service import StoryboardService
 from app.services.video_service import VideoService
+from app.utils.sse_log_handler import pipeline_run_id
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,11 @@ async def generate_script(
     job_store: JobStore = Depends(get_job_store),
 ) -> ScriptResponse:
     """Generate script only (synchronous). Creates a job for persistence."""
+    # Pre-generate run_id so SSE log streaming works during the service call
+    if not request.run_id:
+        import uuid
+        request = request.model_copy(update={"run_id": uuid.uuid4().hex[:12]})
+    token = pipeline_run_id.set(request.run_id)
     try:
         response = await script_svc.generate_script(request)
         # Create job using run_id so file paths and job_id match
@@ -69,6 +75,8 @@ async def generate_script(
     except Exception as exc:
         logger.exception("Script generation failed")
         raise HTTPException(status_code=500, detail=str(exc))
+    finally:
+        pipeline_run_id.reset(token)
 
 
 @router.post("/script/update")
@@ -77,6 +85,7 @@ async def update_script(
     script_svc: ScriptService = Depends(get_script_service),
 ) -> ScriptResponse:
     """Update an edited script (persist changes)."""
+    token = pipeline_run_id.set(request.run_id)
     try:
         return await script_svc.update_script(
             run_id=request.run_id,
@@ -85,6 +94,8 @@ async def update_script(
     except Exception as exc:
         logger.exception("Script update failed")
         raise HTTPException(status_code=500, detail=str(exc))
+    finally:
+        pipeline_run_id.reset(token)
 
 
 @router.post("/avatar")
@@ -94,6 +105,7 @@ async def generate_avatars(
     job_store: JobStore = Depends(get_job_store),
 ) -> AvatarResponse:
     """Generate avatar variants."""
+    token = pipeline_run_id.set(request.run_id)
     try:
         # Merge any user overrides into avatar_profile
         profile = request.avatar_profile
@@ -136,6 +148,8 @@ async def generate_avatars(
     except Exception as exc:
         logger.exception("Avatar generation failed")
         raise HTTPException(status_code=500, detail=str(exc))
+    finally:
+        pipeline_run_id.reset(token)
 
 
 @router.post("/avatar/select")
@@ -148,6 +162,7 @@ async def select_avatar(
 
     Also updates any job that references this run_id with the selected avatar.
     """
+    token = pipeline_run_id.set(request.run_id)
     try:
         selected_path = await avatar_svc.select_avatar(
             run_id=request.run_id,
@@ -168,6 +183,8 @@ async def select_avatar(
     except Exception as exc:
         logger.exception("Avatar selection failed")
         raise HTTPException(status_code=500, detail=str(exc))
+    finally:
+        pipeline_run_id.reset(token)
 
 
 @router.post("/storyboard")
@@ -178,6 +195,7 @@ async def generate_storyboard(
     broadcaster: SSEBroadcaster = Depends(get_broadcaster),
 ) -> StoryboardResponse:
     """Generate storyboard with QC feedback loop."""
+    token = pipeline_run_id.set(request.run_id)
     try:
         def on_progress(data: dict) -> None:
             if data.get("event") == "scene_completed":
@@ -203,6 +221,8 @@ async def generate_storyboard(
     except Exception as exc:
         logger.exception("Storyboard generation failed")
         raise HTTPException(status_code=500, detail=str(exc))
+    finally:
+        pipeline_run_id.reset(token)
 
 
 @router.post("/storyboard/regen-scene")
@@ -212,6 +232,7 @@ async def regen_storyboard_scene(
     job_store: JobStore = Depends(get_job_store),
 ) -> StoryboardResult:
     """Regenerate a single scene's storyboard image."""
+    token = pipeline_run_id.set(request.run_id)
     try:
         result = await storyboard_svc.regenerate_single_scene(
             run_id=request.run_id,
@@ -238,6 +259,8 @@ async def regen_storyboard_scene(
     except Exception as exc:
         logger.exception("Storyboard scene regen failed")
         raise HTTPException(status_code=500, detail=str(exc))
+    finally:
+        pipeline_run_id.reset(token)
 
 
 @router.post("/video")
@@ -248,6 +271,7 @@ async def generate_video(
     broadcaster: SSEBroadcaster = Depends(get_broadcaster),
 ) -> VideoResponse:
     """Generate video variants with QC and auto-selection."""
+    token = pipeline_run_id.set(request.run_id)
     try:
         def on_progress(data: dict) -> None:
             if data.get("event") == "video_completed":
@@ -280,6 +304,8 @@ async def generate_video(
     except Exception as exc:
         logger.exception("Video generation failed")
         raise HTTPException(status_code=500, detail=str(exc))
+    finally:
+        pipeline_run_id.reset(token)
 
 
 @router.post("/video/regen-scene")
@@ -289,6 +315,7 @@ async def regen_video_scene(
     job_store: JobStore = Depends(get_job_store),
 ) -> dict:
     """Regenerate video for a single scene."""
+    token = pipeline_run_id.set(request.run_id)
     try:
         result = await video_svc.regenerate_single_scene(
             run_id=request.run_id,
@@ -323,6 +350,8 @@ async def regen_video_scene(
     except Exception as exc:
         logger.exception("Video scene regen failed")
         raise HTTPException(status_code=500, detail=str(exc))
+    finally:
+        pipeline_run_id.reset(token)
 
 
 @router.post("/video/select")
@@ -331,6 +360,7 @@ async def select_video_variant(
     video_svc: VideoService = Depends(get_video_service),
 ) -> dict:
     """User selects a specific video variant for a scene."""
+    token = pipeline_run_id.set(request.run_id)
     try:
         selected_path = await video_svc.select_variant(
             run_id=request.run_id,
@@ -343,6 +373,8 @@ async def select_video_variant(
     except Exception as exc:
         logger.exception("Video variant selection failed")
         raise HTTPException(status_code=500, detail=str(exc))
+    finally:
+        pipeline_run_id.reset(token)
 
 
 class StitchRequest(BaseModel):
@@ -358,6 +390,7 @@ async def stitch_video(
 ) -> dict:
     """Stitch scene videos into final commercial."""
     run_id = request.run_id
+    token = pipeline_run_id.set(run_id)
     try:
         path = await stitch_svc.stitch_videos(
             run_id=run_id,
@@ -373,3 +406,5 @@ async def stitch_video(
     except Exception as exc:
         logger.exception("Video stitching failed")
         raise HTTPException(status_code=500, detail=str(exc))
+    finally:
+        pipeline_run_id.reset(token)

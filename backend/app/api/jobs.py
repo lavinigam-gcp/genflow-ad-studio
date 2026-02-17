@@ -29,14 +29,14 @@ async def get_job(
 @router.get("/{job_id}/stream")
 async def stream_events(
     job_id: str,
-    job_store: JobStore = Depends(get_job_store),
     broadcaster: SSEBroadcaster = Depends(get_broadcaster),
 ):
-    """SSE event stream for a job."""
-    job = job_store.get_job(job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+    """SSE event stream for a job or pipeline run.
 
+    Accepts any run_id — does not require the job to exist in the DB.
+    Interactive pipeline routes use pre-generated run_ids that may not
+    have a DB record yet when the SSE connection opens.
+    """
     return StreamingResponse(
         broadcaster.event_generator(job_id),
         media_type="text/event-stream",

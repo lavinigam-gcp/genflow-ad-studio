@@ -37,7 +37,7 @@ class ScriptService:
         6. Save script.json
         7. Return ScriptResponse
         """
-        run_id = uuid.uuid4().hex[:12]
+        run_id = request.run_id or uuid.uuid4().hex[:12]
 
         image_url = str(request.image_url)
 

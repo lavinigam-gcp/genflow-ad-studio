@@ -4,11 +4,11 @@ import { ExpandMore, ExpandLess, Terminal } from '@mui/icons-material';
 import { usePipelineStore } from '../../store/pipelineStore';
 
 const LEVEL_COLORS: Record<string, string> = {
-  info: '#1A73E8',
-  success: '#1E8E3E',
-  error: '#D93025',
-  warn: '#E8710A',
-  dim: '#9AA0A6',
+  info: 'info.main',
+  success: 'success.main',
+  error: 'error.main',
+  warn: 'warning.main',
+  dim: 'text.disabled',
 };
 
 export default function LogConsole() {
@@ -50,8 +50,8 @@ export default function LogConsole() {
           px: 2,
           py: 1,
           cursor: 'pointer',
-          backgroundColor: '#F1F3F4',
-          '&:hover': { backgroundColor: '#E8EAED' },
+          bgcolor: 'action.hover',
+          '&:hover': { bgcolor: 'action.selected' },
         }}
       >
         <Terminal sx={{ fontSize: 18, color: 'text.secondary', mr: 1 }} />
@@ -71,7 +71,7 @@ export default function LogConsole() {
             overflow: 'auto',
             px: 2,
             py: 1,
-            backgroundColor: '#F8F9FA',
+            bgcolor: 'background.default',
             fontFamily: '"Roboto Mono", monospace',
             fontSize: 13,
             lineHeight: 1.8,
@@ -80,7 +80,7 @@ export default function LogConsole() {
           {logs.length === 0 ? (
             <Typography
               variant="caption"
-              sx={{ color: '#9AA0A6', fontFamily: '"Roboto Mono", monospace' }}
+              sx={{ color: 'text.disabled', fontFamily: '"Roboto Mono", monospace' }}
             >
               No logs yet
             </Typography>
@@ -90,7 +90,7 @@ export default function LogConsole() {
                 <Typography
                   component="span"
                   sx={{
-                    color: '#9AA0A6',
+                    color: 'text.disabled',
                     fontFamily: '"Roboto Mono", monospace',
                     fontSize: 13,
                     whiteSpace: 'nowrap',

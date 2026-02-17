@@ -11,6 +11,7 @@ from app.api import assets, bulk, config_api, input, jobs, logs, pipeline, revie
 from app.api.health import router as health_router
 from app.db_migrate import migrate_from_json
 from app.dependencies import get_broadcaster, get_database, get_job_store, get_task_runner
+from app.utils.sse_log_handler import SSELogHandler
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,8 +29,13 @@ async def lifespan(app: FastAPI):
     # Initialize singletons on startup
     migrate_from_json(get_database())
     get_job_store()
-    get_broadcaster()
+    broadcaster = get_broadcaster()
     get_task_runner()
+
+    # Stream backend logs to frontend via SSE
+    sse_handler = SSELogHandler(broadcaster)
+    sse_handler.setFormatter(logging.Formatter("%(name)s: %(message)s"))
+    logging.getLogger("app").addHandler(sse_handler)
 
     yield
 
