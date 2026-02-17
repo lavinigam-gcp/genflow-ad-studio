@@ -13,6 +13,7 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Imagen 4 + Veo 3
 | `make test-api` | Smoke-test API (needs running backend) |
 | `make setup` | Full first-time setup |
 | `make clean` | Remove venvs, node_modules, output |
+| `make reset-db` | Delete SQLite DB (fixes Pydantic errors after model changes) |
 | `make generate-samples` | Generate missing sample product images via AI |
 
 **Always run `make check` before finishing any task.**

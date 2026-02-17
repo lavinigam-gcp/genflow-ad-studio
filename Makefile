@@ -1,4 +1,4 @@
-.PHONY: install install-backend install-frontend setup setup-gcs dev dev-backend dev-frontend stop build clean check help test-api generate-samples deploy
+.PHONY: install install-backend install-frontend setup setup-gcs dev dev-backend dev-frontend stop build clean reset-db check help test-api generate-samples deploy
 
 # ─── Config ──────────────────────────────────────
 PROJECT_ID ?= $(shell grep '^PROJECT_ID=' .env 2>/dev/null | cut -d= -f2)
@@ -29,6 +29,7 @@ help:
 	@echo ""
 	@echo "  Cleanup:"
 	@echo "    make clean          - Remove build artifacts and venvs"
+	@echo "    make reset-db       - Delete SQLite DB (fixes stale schema errors after model changes)"
 	@echo ""
 
 # ─── Full Setup ──────────────────────────────────
@@ -146,6 +147,12 @@ deploy:
 		--timeout 600
 	@echo "Deployed!"
 	@gcloud run services describe genflow-ad-studio --region us-central1 --format 'value(status.url)'
+
+# ─── Reset DB ───────────────────────────────────
+reset-db:
+	@echo "Resetting database..."
+	rm -f output/genflow.db output/genflow.db-wal output/genflow.db-shm
+	@echo "  Database deleted. It will be recreated on next 'make dev'."
 
 # ─── Clean ───────────────────────────────────────
 clean:
