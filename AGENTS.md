@@ -70,6 +70,9 @@ asset/                          # Generated architecture diagrams (served at /as
 - Every prompt template field must be wired end-to-end: model field, service, template `.format()`
 - Persisted Pydantic models must use optional fields with defaults for backward compatibility
 - `JobStore.list_jobs()` catches and skips corrupted rows -- one bad job must not crash the app
+- `HowItWorksPage.tsx` step data uses `subtitle` + `bullets[]` (demo talking points) -- not paragraph prose
+- Architecture diagrams must be demo-friendly: no code references, no jargon -- plain language only
+- All diagrams match the visual style of `pipeline-flow.webp`: warm gray background, white cards, Google colors
 
 ## Adding a Feature
 
@@ -134,7 +137,7 @@ Named events: `addEventListener('scene_progress', handler)` and `addEventListene
 - Convert to URL: `storage.to_url_path(abs_path)` -> `/output/{run_id}/...`
 - Pseudo run_ids `"uploads"` and `"generated"` for non-pipeline files
 - GCS only for Veo (it requires `gs://` URIs for input/output)
-- Architecture diagrams: `asset/` at project root, served via `/asset` static mount
+- Architecture diagrams: `asset/` at project root, served via `/asset` static mount -- 9 demo-friendly diagrams generated via Gemini 3 Pro Image
 - Sample images + metadata in `output/samples/` -- managed by `scripts/generate_samples.py`
 
 ## Don'ts

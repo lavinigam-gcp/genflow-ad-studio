@@ -58,6 +58,9 @@ Stack: FastAPI + React 19 + MUI v7 | Gemini 3 Pro/Flash/Image + Imagen 4 + Veo 3
 - Shared UI constants live in `frontend/src/constants/controls.ts` — import from there, never inline
 - Persisted Pydantic models (`VideoQCReport`, etc.) must use optional fields with defaults for backward compatibility — old SQLite data must still load after schema changes
 - `JobStore.list_jobs()` catches and skips corrupted rows — one bad job must not crash the history page
+- `HowItWorksPage.tsx` step data uses `subtitle` + `bullets[]` (demo talking points) — not `description` + `details` (developer prose)
+- Architecture diagrams must be demo-friendly: no code references, no API field names, no developer jargon — explain what happens in plain language
+- All diagrams must match the visual style of `pipeline-flow.webp`: warm gray background, white cards with colored left borders, colored circle icons, Google color palette
 
 ## Navigation Pattern (Optimistic)
 
@@ -120,7 +123,7 @@ asset/                          # Generated architecture diagrams (served at /as
                                 #   video-continuity, ffmpeg-stitching, review-approval
 .docs/diagram-generator/
   generate_diagrams.py          # CLI: generate diagrams via Gemini 3 Pro Image
-  prompts/*.json                # 9 JSON prompt specs (Nano Banana schema)
+  prompts/*.json                # 9 JSON prompt specs (Nano Banana schema, v2.0 demo-friendly)
 ```
 
 ## Don'ts

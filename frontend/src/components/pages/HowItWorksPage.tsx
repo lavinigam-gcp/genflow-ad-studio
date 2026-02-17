@@ -25,56 +25,92 @@ const PIPELINE_STEPS = [
   {
     label: 'Product Input',
     icon: CameraAlt,
-    description: 'Upload a product image (URL, file, or AI-generated), provide specifications, and select scene count (2-6).',
-    details: 'Gemini 3 Flash auto-analyzes the uploaded image to extract product name and key specifications. Supports URL input, file upload, or AI-generated product images via Gemini 3 Pro Image.',
-    tech: 'Gemini 3 Flash',
+    subtitle: 'Three ways to start, AI does the rest',
+    bullets: [
+      'Paste a URL, upload a photo, or let AI generate a studio-quality product image',
+      'Gemini 3 Flash analyzes the image and auto-fills the product name, features, and tagline',
+      'You review the details, choose your scene count (2-6), and set the ad tone',
+    ],
+    tech: 'Gemini 3 Flash + Gemini 3 Pro Image',
     diagram: 'product-input',
   },
   {
     label: 'Script Generation',
     icon: Description,
-    description: 'Gemini 3 Pro acts as an award-winning Ad Director, composing a cinematic script with dialogue, camera directions, lighting, and scene transitions.',
-    details: 'Builds a narrative arc (Hook \u2192 Reveal \u2192 Features \u2192 CTA). Generates identical `detailed_avatar_description` across all scenes for Veo character consistency. Custom creative instructions can be appended.',
-    tech: 'Gemini 3 Pro / Flash',
+    subtitle: 'AI writes your commercial like a professional Ad Director',
+    bullets: [
+      'Gemini 3 Pro acts as an award-winning Ad Director — it sees your product and writes a cinematic script',
+      'Follows a proven narrative arc: Hook (grab attention) \u2192 Reveal (introduce product) \u2192 Features (show benefits) \u2192 CTA (close the deal)',
+      'Script includes scene-by-scene dialogue, camera directions, lighting, sound design, and transitions',
+      'A consistent presenter profile is generated so the same person appears across all scenes',
+    ],
+    tech: 'Gemini 3 Pro',
     diagram: 'script-generation',
   },
   {
     label: 'Avatar Creation',
     icon: Face,
-    description: 'Generate 1-5 photorealistic presenter variants using Gemini 3 Pro Image or Imagen 4, then select the best fit.',
-    details: '85mm portrait template with 3-point lighting. Demographic overrides (gender, ethnicity, age) replace visual_description to avoid conflicting prompt instructions. Selected avatar is used for visual consistency across all scenes.',
+    subtitle: 'AI generates your presenter — you pick your favorite',
+    bullets: [
+      'Gemini 3 Pro Image creates 1-5 photorealistic presenter portraits based on the script\u2019s profile',
+      'Optionally customize gender, ethnicity, age range, or write your own description',
+      'Each variant is unique — browse the gallery and click to select',
+      'Your chosen presenter will appear consistently across every scene in the final video',
+    ],
     tech: 'Gemini 3 Pro Image',
     diagram: 'avatar-creation',
   },
   {
-    label: 'Storyboard',
+    label: 'Storyboard & Quality Control',
     icon: GridView,
-    description: 'Scene-by-scene storyboard frames with an automated generate \u2192 evaluate \u2192 refine QC loop (up to 3 attempts).',
-    details: 'Gemini 3 Pro Image generates frames. Gemini 3 Flash QC scores each on avatar match, product accuracy, and composition (0-100). Failed frames get prompt rewriting. Best result is kept even if none pass QC threshold.',
+    subtitle: 'AI draws each scene, then checks its own work',
+    bullets: [
+      'Gemini 3 Pro Image generates a photorealistic storyboard frame for each scene',
+      'A separate model (Gemini 3 Flash) reviews every frame on 3 dimensions: presenter match, product accuracy, and visual composition',
+      'If a frame scores below the quality threshold, AI rewrites the prompt and regenerates automatically',
+      'Up to 3 attempts per scene — the best result is always kept, even if none pass perfectly',
+    ],
     tech: 'Gemini 3 Pro Image + Flash QC',
     diagram: 'storyboard-qc',
   },
   {
     label: 'Video Generation',
     icon: Videocam,
-    description: 'Veo 3.1 generates 4-8 second video clips for each scene with scene-to-scene continuity via last-frame chaining.',
-    details: 'Sequential scene processing ensures continuity. 7-dimension QC evaluates technical quality, avatar consistency, motion, and audio. Same seed across all scenes for character and voice consistency. Reference images require Preview models and enforce 8s duration.',
+    subtitle: 'Veo 3.1 creates video clips with built-in scene continuity',
+    bullets: [
+      'Veo 3.1 generates 4-8 second video clips with native dialogue, sound effects, and music',
+      'Scenes are processed sequentially — the last frame of each scene feeds into the next for visual continuity',
+      'Same random seed across all scenes keeps the presenter\u2019s voice and appearance consistent',
+      'Gemini 3 Flash scores each video across 7 quality dimensions (technical, avatar, product, composition, motion, audio, temporal)',
+      'Below-threshold videos are regenerated with an improved prompt (up to 3 tries)',
+    ],
     tech: 'Veo 3.1 + Flash QC',
     diagram: 'video-continuity',
   },
   {
-    label: 'Final Stitching',
+    label: 'Final Assembly',
     icon: ContentCut,
-    description: 'FFmpeg composites all scene clips into a finished commercial with per-scene transitions and normalized audio.',
-    details: 'VFR \u2192 24fps CFR preprocessing. Transition map (dissolve\u2192fade, wipe\u2192wipeleft, zoom\u2192zoomin). Audio normalization via loudnorm (I=-14, TP=-1). H.264/AAC encoding with optimized or lossless compression.',
+    subtitle: 'Scene clips become a polished commercial',
+    bullets: [
+      'All scene clips are standardized to 24 frames per second for smooth playback',
+      'Scene transitions from the script are applied: dissolve, wipe, zoom, or clean cut',
+      'Audio is normalized to broadcast standards so nothing is too loud or too quiet',
+      'Output is a polished 30-second MP4 video that plays anywhere',
+    ],
     tech: 'FFmpeg',
     diagram: 'ffmpeg-stitching',
   },
   {
     label: 'Review & Approval',
     icon: RateReview,
-    description: 'Watch the final commercial, inspect per-scene QC scores across all 7 dimensions, and approve, reject, or request revisions.',
-    details: 'Rejected ads can be regenerated from any pipeline step. Per-scene video variants and QC feedback are preserved for comparison.',
+    subtitle: 'Watch your commercial, then approve, revise, or reject',
+    bullets: [
+      'Watch the complete commercial with all scenes, transitions, and audio',
+      'Jump to any scene, compare different video takes, and view AI quality scores',
+      'Approve to mark as ready for distribution',
+      'Request changes targeting a specific step — AI regenerates from that point forward',
+      'Reject to discard and start fresh',
+    ],
     tech: 'Human + AI',
     diagram: 'review-approval',
   },
@@ -202,12 +238,22 @@ export default function HowItWorksPage() {
                   }}
                 >
                   <CardContent>
-                    <Typography variant="body1" sx={{ mb: 1.5 }}>
-                      {step.description}
+                    <Typography variant="body1" sx={{ mb: 1.5, fontWeight: 500 }}>
+                      {step.subtitle}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      {step.details}
-                    </Typography>
+                    <Box component="ul" sx={{ m: 0, pl: 2.5, mb: 2 }}>
+                      {step.bullets.map((bullet, i) => (
+                        <Box
+                          component="li"
+                          key={i}
+                          sx={{ mb: 0.75 }}
+                        >
+                          <Typography variant="body2" color="text.secondary">
+                            {bullet}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                       <Chip
                         label={step.tech}
