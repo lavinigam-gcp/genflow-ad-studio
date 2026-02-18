@@ -16,7 +16,7 @@ export default function AppBar() {
       position="static"
       color="default"
       elevation={0}
-      sx={{ borderBottom: 'none', boxShadow: 'none', backgroundColor: 'background.paper' }}
+      sx={{ borderBottom: 'none', boxShadow: 'none' }}
     >
       <Toolbar
         sx={{
@@ -37,8 +37,9 @@ export default function AppBar() {
               height: 100,
               width: 'auto',
               cursor: 'pointer',
-              filter: mode === 'dark' ? 'invert(1) hue-rotate(180deg)' : 'none',
-              transition: 'filter 0.3s ease',
+              filter: mode === 'dark' ? 'invert(1) hue-rotate(180deg) brightness(1.2)' : 'none',
+              mixBlendMode: mode === 'dark' ? 'lighten' : 'normal',
+              transition: 'all 0.3s ease',
             }}
             onClick={() => navigate('/')}
           />

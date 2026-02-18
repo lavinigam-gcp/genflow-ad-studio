@@ -124,17 +124,15 @@ export default function PipelineView() {
       {/* Run ID banner */}
       {runId && (
         <Box
+          className="glass-panel"
           sx={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            mb: 2,
-            px: 2,
+            mb: 3,
+            px: 3,
             py: 1,
-            backgroundColor: 'background.default',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'divider',
+            borderRadius: 40,
             animation: 'fadeInUp 0.3s ease',
           }}
         >
@@ -146,7 +144,7 @@ export default function PipelineView() {
               variant="body2"
               sx={{
                 fontFamily: '"Roboto Mono", monospace',
-                fontWeight: 600,
+                fontWeight: 700,
                 color: 'text.primary',
               }}
             >
@@ -154,16 +152,21 @@ export default function PipelineView() {
             </Typography>
             <Tooltip title="Copy Run ID">
               <IconButton size="small" onClick={handleCopyRunId}>
-                <ContentCopy sx={{ fontSize: 14 }} />
+                <ContentCopy sx={{ fontSize: 16, color: 'text.secondary' }} />
               </IconButton>
             </Tooltip>
           </Box>
           <Button
             variant="outlined"
             size="small"
-            startIcon={<AddCircleOutline />}
+            startIcon={<AddCircleOutline fontSize="small" />}
             onClick={handleNewGeneration}
-            sx={{ textTransform: 'none' }}
+            sx={{
+              textTransform: 'none',
+              borderRadius: 20,
+              fontWeight: 600,
+              px: 2,
+            }}
           >
             New Generation
           </Button>

@@ -30,20 +30,27 @@ export default function QCDetailPanel({ dimensions }: QCDetailPanelProps) {
       disableGutters
       elevation={0}
       sx={{
-        border: 'none',
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: '16px !important',
         '&::before': { display: 'none' },
-        backgroundColor: 'transparent',
+        backgroundColor: 'background.paper',
+        overflow: 'hidden',
+        transition: 'box-shadow 0.2s ease',
+        '&:hover': {
+          boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+        }
       }}
     >
       <AccordionSummary
         expandIcon={<ExpandMore sx={{ fontSize: 18 }} />}
         sx={{
-          minHeight: 32,
-          px: 0,
-          '& .MuiAccordionSummary-content': { my: 0.5 },
+          minHeight: 48,
+          px: 2,
+          '& .MuiAccordionSummary-content': { my: 1 },
         }}
       >
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary', letterSpacing: '0.01em' }}>
           QC Details
         </Typography>
       </AccordionSummary>
@@ -51,10 +58,10 @@ export default function QCDetailPanel({ dimensions }: QCDetailPanelProps) {
         {dimensions.map((dim) => (
           <Box key={dim.label} sx={{ mb: 1.5 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-              <Typography variant="caption" sx={{ fontWeight: 500 }}>
+              <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>
                 {dim.label}
               </Typography>
-              <Typography variant="caption" sx={{ fontWeight: 600 }}>
+              <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>
                 {dim.score}
               </Typography>
             </Box>
@@ -69,9 +76,9 @@ export default function QCDetailPanel({ dimensions }: QCDetailPanelProps) {
               color="text.secondary"
               sx={{
                 display: 'block',
-                mt: 0.25,
-                fontSize: 11,
-                lineHeight: 1.3,
+                mt: 0.5,
+                fontSize: 12,
+                lineHeight: 1.4,
               }}
             >
               {dim.reasoning}

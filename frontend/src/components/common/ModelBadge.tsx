@@ -14,14 +14,15 @@ export default function ModelBadge({ label = 'Nano Banana Pro', sx }: ModelBadge
         display: 'inline-flex',
         alignItems: 'center',
         gap: 0.75,
-        px: 1.5,
-        py: 0.5,
-        borderRadius: 2,
+        px: 2,
+        py: 0.75,
+        borderRadius: 999,
         border: '1px solid',
         borderColor: 'divider',
         bgcolor: 'background.paper',
         position: 'relative',
         overflow: 'hidden',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
         '&::after': {
           content: '""',
           position: 'absolute',
@@ -30,9 +31,12 @@ export default function ModelBadge({ label = 'Nano Banana Pro', sx }: ModelBadge
           width: '100%',
           height: '100%',
           background:
-            'linear-gradient(90deg, transparent 0%, var(--mui-palette-primary-main) 50%, transparent 100%)',
-          opacity: 0.08,
+            'linear-gradient(90deg, transparent 0%, rgba(26, 115, 232, 0.15) 50%, transparent 100%)',
           animation: 'badgeShimmer 3s ease-in-out infinite',
+        },
+        '.dark &::after': {
+          background:
+            'linear-gradient(90deg, transparent 0%, rgba(168, 199, 250, 0.15) 50%, transparent 100%)',
         },
         '@keyframes badgeShimmer': {
           '0%': { left: '-100%' },

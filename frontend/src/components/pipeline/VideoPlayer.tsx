@@ -24,6 +24,7 @@ import {
   MenuItem,
   Switch,
   CircularProgress,
+  Paper,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import { ArrowForward, EmojiEvents, CheckCircle, Refresh, ExpandMore, ExpandLess } from '@mui/icons-material';
@@ -162,7 +163,7 @@ export default function VideoPlayer({
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: 'text.primary' }}>
             Video Generation
           </Typography>
           <ModelBadge label={VEO_MODELS.find((m) => m.id === veoModel)?.label} />
@@ -176,8 +177,8 @@ export default function VideoPlayer({
 
       {/* Controls Panel */}
       {!readOnly && (
-        <Card sx={{ mb: 3, border: 1, borderColor: 'divider' }}>
-          <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Paper elevation={0} sx={{ mb: 4, p: { xs: 2, md: 3 }, backgroundColor: 'background.paper', borderRadius: 4, border: '1px solid', borderColor: 'divider' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             {/* Row 1: Veo model, Aspect ratio chip, Duration */}
             <Grid container spacing={2} sx={{ alignItems: 'center' }}>
               <Grid size={{ xs: 12, sm: 4 }}>
@@ -407,8 +408,8 @@ export default function VideoPlayer({
             >
               Generate Videos
             </Button>
-          </CardContent>
-        </Card>
+          </Box>
+        </Paper>
       )}
 
       {/* Empty state */}
@@ -451,18 +452,20 @@ export default function VideoPlayer({
       {/* Results section */}
       {results.map((sceneResult) => (
         <Box key={sceneResult.scene_number} sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-            <Typography variant="h6">
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, letterSpacing: '-0.01em' }}>
               Scene {sceneResult.scene_number}
             </Typography>
             {(sceneResult.regen_attempts ?? 0) > 0 && (
               <Chip
                 label={`${sceneResult.regen_attempts} QC regen`}
                 size="small"
-                color="warning"
                 sx={{
+                  bgcolor: 'warning.main',
+                  color: 'warning.contrastText',
                   fontSize: 11,
                   fontWeight: 600,
+                  border: 'none',
                 }}
               />
             )}
@@ -472,7 +475,7 @@ export default function VideoPlayer({
                 size="small"
                 color="info"
                 variant="outlined"
-                sx={{ fontSize: 11 }}
+                sx={{ fontSize: 11, fontWeight: 600, borderColor: 'info.main' }}
               />
             )}
             {onRegenScene && !readOnly && (
@@ -592,17 +595,18 @@ export default function VideoPlayer({
             })}
           </Grid>
 
+          <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
           {/* QC Rewrite Context — expandable */}
           {sceneResult.qc_rewrite_context && (
-            <Box sx={{ mt: 1.5 }}>
+              <Box>
               <Box
                 onClick={() => setExpandedQcContext((p) => ({ ...p, [sceneResult.scene_number]: !p[sceneResult.scene_number] }))}
-                sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: 0.5 }}
+                  sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: 0.5, mb: 0.5 }}
               >
-                <Typography variant="caption" sx={{ fontWeight: 500, color: 'info.main' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: 'info.main', letterSpacing: '0.01em' }}>
                   QC Feedback Used for Rewrite
                 </Typography>
-                {expandedQcContext[sceneResult.scene_number] ? <ExpandLess sx={{ fontSize: 16 }} /> : <ExpandMore sx={{ fontSize: 16 }} />}
+                  {expandedQcContext[sceneResult.scene_number] ? <ExpandLess sx={{ fontSize: 18, color: 'info.main' }} /> : <ExpandMore sx={{ fontSize: 18, color: 'info.main' }} />}
               </Box>
               <Collapse in={!!expandedQcContext[sceneResult.scene_number]}>
                 <Typography
@@ -631,15 +635,15 @@ export default function VideoPlayer({
 
           {/* Prompt used — expandable */}
           {sceneResult.prompt_used && (
-            <Box sx={{ mt: 1.5 }}>
+              <Box>
               <Box
                 onClick={() => setExpandedPrompts((p) => ({ ...p, [sceneResult.scene_number]: !p[sceneResult.scene_number] }))}
-                sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: 0.5 }}
+                  sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: 0.5, mb: 0.5 }}
               >
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  <Typography variant="body2" color="text.primary" sx={{ fontWeight: 600, letterSpacing: '0.01em' }}>
                   Prompt Used
                 </Typography>
-                {expandedPrompts[sceneResult.scene_number] ? <ExpandLess sx={{ fontSize: 16 }} /> : <ExpandMore sx={{ fontSize: 16 }} />}
+                  {expandedPrompts[sceneResult.scene_number] ? <ExpandLess sx={{ fontSize: 18 }} /> : <ExpandMore sx={{ fontSize: 18 }} />}
               </Box>
               <Collapse in={!!expandedPrompts[sceneResult.scene_number]}>
                 <Typography
@@ -663,6 +667,7 @@ export default function VideoPlayer({
               </Collapse>
             </Box>
           )}
+        </Box>
         </Box>
       ))}
 

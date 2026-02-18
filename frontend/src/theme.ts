@@ -9,7 +9,7 @@ export const theme = createTheme({
       palette: {
         primary: {
           main: '#1A73E8',
-          light: '#D2E3FC',
+          light: '#E8F0FE',
           dark: '#1558B0',
         },
         secondary: {
@@ -17,68 +17,73 @@ export const theme = createTheme({
         },
         success: {
           main: '#1E8E3E',
-          light: '#CEEAD6',
+          light: '#E6F4EA',
         },
         warning: {
-          main: '#E8710A',
+          main: '#F9AB00',
+          light: '#FEF7E0',
         },
         error: {
           main: '#D93025',
           light: '#FCE8E6',
         },
         background: {
-          default: '#F8F9FA',
+          default: '#FAFAFA',
           paper: '#FFFFFF',
         },
         text: {
           primary: '#202124',
           secondary: '#5F6368',
         },
-        divider: '#DADCE0',
+        divider: 'rgba(0,0,0,0.08)',
       },
     },
     dark: {
       palette: {
         primary: {
-          main: '#8AB4F8',
-          light: '#1A3A6B',
-          dark: '#5E9BF0',
+          main: '#A8C7FA',
+          light: '#0842A0',
+          dark: '#D3E3FD',
         },
         secondary: {
-          main: '#9AA0A6',
+          main: '#C4C7C5',
+          light: '#474747',
         },
         success: {
           main: '#81C995',
           light: '#1B3726',
         },
         warning: {
-          main: '#FDD663',
+          main: '#FDE293',
+          light: '#4D360B',
         },
         error: {
           main: '#F28B82',
           light: '#3C2020',
         },
         background: {
-          default: '#1E1E1E',
-          paper: '#2D2D2D',
+          default: '#131314', // Google true dark
+          paper: '#1E1F20',   // Elevated dark surface
         },
         text: {
-          primary: '#E8EAED',
-          secondary: '#9AA0A6',
+          primary: '#E3E3E3',
+          secondary: '#C4C7C5',
         },
-        divider: '#3C4043',
+        divider: 'rgba(255,255,255,0.08)',
       },
     },
   },
   typography: {
-    fontFamily: '"Google Sans", Roboto, system-ui, -apple-system, sans-serif',
+    fontFamily: '"Outfit", "Google Sans", Roboto, system-ui, -apple-system, sans-serif',
     h1: {
-      fontFamily: '"Google Sans", Roboto, system-ui, -apple-system, sans-serif',
+      fontFamily: '"Outfit", "Google Sans", Roboto, system-ui, -apple-system, sans-serif',
       fontWeight: 600,
+      letterSpacing: '-0.02em',
     },
     h2: {
-      fontFamily: '"Google Sans", Roboto, system-ui, -apple-system, sans-serif',
+      fontFamily: '"Outfit", "Google Sans", Roboto, system-ui, -apple-system, sans-serif',
       fontWeight: 600,
+      letterSpacing: '-0.01em',
     },
     h3: {
       fontFamily: '"Google Sans", Roboto, system-ui, -apple-system, sans-serif',
@@ -97,48 +102,67 @@ export const theme = createTheme({
       fontWeight: 500,
     },
     body1: {
-      fontFamily: 'Roboto, system-ui, -apple-system, sans-serif',
+      fontFamily: '"Google Sans", Roboto, system-ui, -apple-system, sans-serif',
+      letterSpacing: '0.01em',
     },
     body2: {
-      fontFamily: 'Roboto, system-ui, -apple-system, sans-serif',
+      fontFamily: '"Google Sans", Roboto, system-ui, -apple-system, sans-serif',
+      letterSpacing: '0.01em',
     },
     button: {
-      fontFamily: '"Google Sans", Roboto, system-ui, -apple-system, sans-serif',
-      fontWeight: 500,
+      fontFamily: '"Outfit", "Google Sans", Roboto, system-ui, -apple-system, sans-serif',
+      fontWeight: 600,
+      letterSpacing: '0.02em',
     },
     caption: {
-      fontFamily: 'Roboto, system-ui, -apple-system, sans-serif',
+      fontFamily: '"Google Sans", Roboto, system-ui, -apple-system, sans-serif',
     },
     overline: {
-      fontFamily: 'Roboto, system-ui, -apple-system, sans-serif',
+      fontFamily: '"Outfit", system-ui, -apple-system, sans-serif',
+      letterSpacing: '0.06em',
+      fontWeight: 600,
+      textTransform: 'uppercase',
     },
   },
   shape: {
-    borderRadius: 8,
+    borderRadius: 16,
   },
   components: {
     MuiButton: {
       styleOverrides: {
-        root: {
-          borderRadius: 20,
+        root: ({ theme }) => ({
+          borderRadius: 999, // Pill shape M3
           textTransform: 'none' as const,
-          fontWeight: 500,
+          fontWeight: 600,
           boxShadow: 'none',
+          padding: '8px 20px',
+          transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
           '&:hover': {
-            boxShadow: 'none',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            transform: 'translateY(-1px)',
           },
-        },
+          '&:active': {
+            transform: 'translateY(0)',
+          },
+          ...theme.applyStyles('dark', {
+            '&:hover': {
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            },
+          })
+        }),
         containedPrimary: ({ theme }) => ({
           background: 'linear-gradient(135deg, #1A73E8 0%, #4285F4 100%)',
           color: '#FFFFFF',
           '&:hover': {
             background: 'linear-gradient(135deg, #1558B0 0%, #3B78DB 100%)',
+            boxShadow: '0 4px 12px rgba(26,115,232,0.3)',
           },
           ...theme.applyStyles('dark', {
-            background: 'linear-gradient(135deg, #8AB4F8 0%, #5E9BF0 100%)',
-            color: '#1E1E1E',
+            background: 'linear-gradient(135deg, #A8C7FA 0%, #8AB4F8 100%)',
+            color: '#0842A0',
             '&:hover': {
-              background: 'linear-gradient(135deg, #5E9BF0 0%, #4A8AE0 100%)',
+              background: 'linear-gradient(135deg, #D3E3FD 0%, #A8C7FA 100%)',
+              boxShadow: '0 4px 12px rgba(168,199,250,0.3)',
             },
           }),
         }),
@@ -147,29 +171,36 @@ export const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: ({ theme }) => ({
-          borderRadius: 12,
+          borderRadius: 24,
           border: `1px solid ${theme.palette.divider}`,
           boxShadow: 'none',
-          transition: 'all 0.2s ease',
+          backgroundColor: '#FFFFFF',
+          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          backgroundImage: 'none',
           '&:hover': {
-            boxShadow: '0 4px 16px rgba(26,115,232,0.12)',
-            borderColor: '#B4D0F0',
-            transform: 'translateY(-1px)',
+            boxShadow: '0 12px 32px rgba(26,115,232,0.05)',
+            transform: 'translateY(-4px)',
           },
           ...theme.applyStyles('dark', {
+            backgroundColor: '#1E1F20',
             '&:hover': {
-              boxShadow: '0 4px 16px rgba(138,180,248,0.08)',
-              borderColor: '#5E9BF0',
-            },
-          }),
+              boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
+            }
+          })
         }),
       },
     },
     MuiPaper: {
       styleOverrides: {
         root: ({ theme }) => ({
+          borderRadius: 24,
           boxShadow: 'none',
+          backgroundImage: 'none',
           border: `1px solid ${theme.palette.divider}`,
+          backgroundColor: theme.palette.background.paper,
+          ...theme.applyStyles('dark', {
+            backgroundColor: '#1E1F20', // dark surface container
+          })
         }),
       },
     },
@@ -185,14 +216,45 @@ export const theme = createTheme({
       defaultProps: {
         variant: 'outlined' as const,
       },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 12,
+            transition: 'box-shadow 0.2s ease',
+            backgroundColor: 'transparent',
+            '&:hover': {
+              backgroundColor: 'rgba(0,0,0,0.01)',
+            },
+            '&.Mui-focused': {
+              backgroundColor: 'transparent',
+              boxShadow: `0 0 0 2px ${theme.palette.primary.light}`,
+            },
+          },
+          ...theme.applyStyles('dark', {
+            '& .MuiOutlinedInput-root': {
+              '&:hover': {
+                backgroundColor: 'rgba(255,255,255,0.01)',
+              },
+              '&.Mui-focused': {
+                boxShadow: `0 0 0 2px ${theme.palette.primary.dark}`,
+              },
+            }
+          })
+        })
+      }
     },
     MuiAppBar: {
       styleOverrides: {
         root: ({ theme }) => ({
-          backgroundColor: theme.palette.background.paper,
+          backgroundColor: 'rgba(255,255,255,0.85)',
+          backdropFilter: 'blur(12px)',
           color: theme.palette.text.primary,
           boxShadow: 'none',
           borderBottom: `1px solid ${theme.palette.divider}`,
+          transition: 'background-color 0.3s ease',
+          ...theme.applyStyles('dark', {
+            backgroundColor: 'rgba(30,31,32,0.85)',
+          })
         }),
       },
     },
@@ -200,14 +262,16 @@ export const theme = createTheme({
       styleOverrides: {
         line: ({ theme }) => ({
           borderColor: theme.palette.divider,
-          borderTopWidth: 2,
+          borderTopWidth: 3,
+          borderRadius: 2,
         }),
       },
     },
     MuiLinearProgress: {
       styleOverrides: {
         root: {
-          borderRadius: 4,
+          borderRadius: 8,
+          height: 6,
         },
       },
     },
@@ -217,10 +281,12 @@ export const theme = createTheme({
           '& .MuiTableCell-head': {
             backgroundColor: '#F1F3F4',
             color: theme.palette.text.primary,
+            fontWeight: 600,
           },
           ...theme.applyStyles('dark', {
             '& .MuiTableCell-head': {
-              backgroundColor: '#353535',
+              backgroundColor: '#282A2C',
+              color: '#E3E3E3',
             },
           }),
         }),

@@ -4,13 +4,14 @@ import {
   Stepper,
   Step,
   StepLabel,
-  CircularProgress,
   Button,
   Tooltip,
   Typography,
   IconButton,
-  Fab,
   Badge,
+  Fab,
+  StepConnector,
+  stepConnectorClasses,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import {
@@ -22,6 +23,13 @@ import {
   Terminal,
   Close,
   HelpOutline,
+  Input as InputIcon,
+  Description as ScriptIcon,
+  Face as AvatarIcon,
+  VideoLibrary as StoryboardIcon,
+  SmartDisplay as VideoIcon,
+  AutoAwesome as FinalIcon,
+  RateReview as ReviewIcon,
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import AppBar from './AppBar';
@@ -38,65 +46,41 @@ const NAV_ITEMS = [
 ];
 
 const STEPS = [
-  'Input',
-  'Script',
-  'Avatar',
-  'Storyboard',
-  'Video',
-  'Final',
-  'Review',
+  { label: 'Input', icon: <InputIcon fontSize="inherit" /> },
+  { label: 'Script', icon: <ScriptIcon fontSize="inherit" /> },
+  { label: 'Avatar', icon: <AvatarIcon fontSize="inherit" /> },
+  { label: 'Storyboard', icon: <StoryboardIcon fontSize="inherit" /> },
+  { label: 'Video', icon: <VideoIcon fontSize="inherit" /> },
+  { label: 'Final', icon: <FinalIcon fontSize="inherit" /> },
+  { label: 'Review', icon: <ReviewIcon fontSize="inherit" /> },
 ];
 
 function StepIcon({
   active,
   completed,
-  viewing,
   icon
 }: {
   active: boolean;
-  completed: boolean;
-  viewing?: boolean;
+    completed: boolean;
   icon: React.ReactNode;
 }) {
-  if (active) {
-    return <CircularProgress size={20} thickness={5} />;
-  }
-  if (completed) {
-    return <CheckCircle sx={{ color: 'success.main', fontSize: 24 }} />;
-  }
-  if (viewing) {
-    return (
-      <Box
-        sx={{
-          width: 24,
-          height: 24,
-          borderRadius: '50%',
-          backgroundColor: 'primary.main',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 12,
-          fontWeight: 500,
-          color: 'white',
-        }}
-      >
-        {icon}
-      </Box>
-    );
+  if (completed || active) {
+    return <CheckCircle sx={{ color: 'success.main', fontSize: 32, transition: 'color 0.3s' }} />;
   }
   return (
     <Box
       sx={{
-        width: 24,
-        height: 24,
+        width: 32,
+        height: 32,
         borderRadius: '50%',
-        backgroundColor: 'divider',
+        backgroundColor: 'action.disabledBackground',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: 12,
-        fontWeight: 500,
+        fontSize: 18,
+        fontWeight: 700,
         color: 'text.secondary',
+        transition: 'all 0.3s ease',
       }}
     >
       {icon}
@@ -193,7 +177,6 @@ export default function MainLayout() {
   const theme = useTheme();
   const activeStep = usePipelineStore((s) => s.activeStep);
   const setStep = usePipelineStore((s) => s.setStep);
-  const isLoading = usePipelineStore((s) => s.isLoading);
 
   const [logPanelOpen, setLogPanelOpen] = useState(false);
   const logs = usePipelineStore((s) => s.logs);
@@ -248,11 +231,12 @@ export default function MainLayout() {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <Box className="aurora-bg" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <AppBar />
 
       {/* Floating left nav */}
       <Box
+        className="glass-panel"
         sx={{
           position: 'fixed',
           left: 12,
@@ -262,12 +246,9 @@ export default function MainLayout() {
           display: 'flex',
           flexDirection: 'column',
           gap: 0.5,
-          backgroundColor: 'background.paper',
-          borderRadius: 3,
-          boxShadow: '0 2px 12px rgba(0,0,0,0.1)',
-          border: '1px solid',
-          borderColor: 'divider',
-          py: 1,
+          borderRadius: 4,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          py: 1.5,
           px: 0.5,
         }}
       >
@@ -303,23 +284,47 @@ export default function MainLayout() {
 
       <Box
         sx={{
-          py: 2,
+          py: 3,
           px: 3,
-          pl: { xs: 3, sm: 10 },
-          background: 'linear-gradient(180deg, var(--mui-palette-background-paper) 0%, var(--mui-palette-background-default) 100%)',
+          backgroundColor: 'background.default',
           borderBottom: '1px solid',
           borderColor: 'divider',
+          transition: 'background-color 0.3s ease',
         }}
       >
         <Stepper
           activeStep={activeStep}
           alternativeLabel
+          connector={
+            <StepConnector
+              sx={{
+                top: 12,
+                left: 'calc(-50% + 16px)',
+                right: 'calc(50% + 16px)',
+                [`&.${stepConnectorClasses.active}`]: {
+                  [`& .${stepConnectorClasses.line}`]: {
+                    borderColor: theme.palette.success.main,
+                  },
+                },
+                [`&.${stepConnectorClasses.completed}`]: {
+                  [`& .${stepConnectorClasses.line}`]: {
+                    borderColor: theme.palette.success.main,
+                  },
+                },
+                [`& .${stepConnectorClasses.line}`]: {
+                  borderColor: theme.palette.divider,
+                  borderTopWidth: 2,
+                  borderRadius: 1,
+                  transition: 'border-color 0.3s ease',
+                },
+              }}
+            />
+          }
           sx={{ maxWidth: 900, mx: 'auto' }}
         >
-          {STEPS.map((label, index) => {
+          {STEPS.map(({ label, icon }, index) => {
             const canNavigate = index <= maxStep;
 
-            const isProcessing = index === activeStep && isLoading;
             const isCompleted = index < maxStep;
             const isViewing = index === activeStep;
 
@@ -341,27 +346,30 @@ export default function MainLayout() {
               >
                 <StepLabel
                   slots={{
-                    stepIcon: (props) => (
+                    stepIcon: () => (
                       <StepIcon
-                        active={isProcessing}
+                        active={isViewing}
                         completed={isCompleted}
-                        viewing={isViewing}
-                        icon={props.icon}
+                        icon={icon}
                       />
                     ),
                   }}
                   sx={{
                     '& .MuiStepLabel-label': {
-                      fontWeight: isViewing ? 700 : 400,
-                      color: isViewing ? 'primary.main' : 'inherit',
+                      fontWeight: 600,
+                      color: 'text.secondary',
+                      fontSize: '0.9rem',
+                      letterSpacing: '0.01em',
+                      mt: 0.5,
+                      transition: 'color 0.2s ease, font-weight 0.2s ease',
                     },
                     '& .MuiStepLabel-label.Mui-completed': {
-                      color: isViewing ? 'primary.main' : 'inherit',
-                      fontWeight: isViewing ? 700 : 400,
+                      color: 'text.primary',
+                      fontWeight: 700,
                     },
                     '& .MuiStepLabel-label.Mui-active': {
-                      color: isViewing ? 'primary.main' : 'inherit',
-                      fontWeight: isViewing ? 700 : 400,
+                      color: 'primary.main',
+                      fontWeight: 700,
                     },
                   }}
                 >

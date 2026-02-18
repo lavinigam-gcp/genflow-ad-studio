@@ -17,3 +17,63 @@
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
 }
+
+@keyframes auroraFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.aurora-bg {
+  background: linear-gradient(-45deg, rgba(232, 240, 254, 0.3), rgba(246, 248, 252, 0.6), rgba(254, 247, 224, 0.3));
+  background-size: 400% 400%;
+  animation: auroraFlow 15s ease infinite;
+}
+
+.dark .aurora-bg {
+  background: linear-gradient(-45deg, rgba(8, 66, 160, 0.1), rgba(19, 19, 20, 0.6), rgba(61, 43, 9, 0.1));
+  background-size: 400% 400%;
+}
+
+.glass-panel {
+  background-color: rgba(255, 255, 255, 0.6) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.dark .glass-panel {
+  background-color: rgba(30, 31, 32, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.file-drop-zone {
+  border: 2px dashed rgba(0, 0, 0, 0.12);
+  border-radius: 16px;
+  background-color: rgba(26, 115, 232, 0.03);
+  transition: all 0.2s ease-in-out;
+}
+
+.file-drop-zone:hover {
+  border-color: #1A73E8;
+  background-color: rgba(26, 115, 232, 0.08);
+}
+
+.dark .file-drop-zone {
+  border-color: rgba(255, 255, 255, 0.12);
+  background-color: rgba(168, 199, 250, 0.04);
+}
+
+.dark .file-drop-zone:hover {
+  border-color: #A8C7FA;
+  background-color: rgba(168, 199, 250, 0.08);
+}

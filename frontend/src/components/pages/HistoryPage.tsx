@@ -86,16 +86,16 @@ export default function HistoryPage() {
             </CardContent>
           </Card>
         ) : (
-          <TableContainer component={Paper}>
+            <TableContainer component={Paper} sx={{ bgcolor: 'background.paper', backgroundImage: 'none', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 600 }}>Job ID</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Title</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Created</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Updated</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.primary', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Job ID</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.primary', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Title</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.primary', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.primary', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Created</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.primary', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Updated</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.primary', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }} align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
