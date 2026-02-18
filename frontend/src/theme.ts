@@ -246,14 +246,15 @@ export const theme = createTheme({
     MuiAppBar: {
       styleOverrides: {
         root: ({ theme }) => ({
-          backgroundColor: 'rgba(255,255,255,0.85)',
-          backdropFilter: 'blur(12px)',
+          backgroundColor: 'transparent',
           color: theme.palette.text.primary,
           boxShadow: 'none',
-          borderBottom: `1px solid ${theme.palette.divider}`,
+          backgroundImage: 'none',
+          borderBottom: 'none',
           transition: 'background-color 0.3s ease',
           ...theme.applyStyles('dark', {
-            backgroundColor: 'rgba(30,31,32,0.85)',
+            backgroundColor: 'transparent',
+            backgroundImage: 'none',
           })
         }),
       },

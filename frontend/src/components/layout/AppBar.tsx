@@ -38,7 +38,7 @@ export default function AppBar() {
               width: 'auto',
               cursor: 'pointer',
               filter: mode === 'dark' ? 'invert(1) hue-rotate(180deg) brightness(1.2)' : 'none',
-              mixBlendMode: mode === 'dark' ? 'lighten' : 'normal',
+              mixBlendMode: mode === 'dark' ? 'lighten' : 'multiply',
               transition: 'all 0.3s ease',
             }}
             onClick={() => navigate('/')}

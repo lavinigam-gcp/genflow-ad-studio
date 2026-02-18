@@ -286,9 +286,7 @@ export default function MainLayout() {
         sx={{
           py: 3,
           px: 3,
-          backgroundColor: 'background.default',
-          borderBottom: '1px solid',
-          borderColor: 'divider',
+          backgroundColor: 'transparent',
           transition: 'background-color 0.3s ease',
         }}
       >

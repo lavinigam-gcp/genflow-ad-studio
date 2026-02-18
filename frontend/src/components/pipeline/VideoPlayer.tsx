@@ -25,9 +25,12 @@ import {
   Switch,
   CircularProgress,
   Paper,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
-import { ArrowForward, EmojiEvents, CheckCircle, Refresh, ExpandMore, ExpandLess } from '@mui/icons-material';
+import { ArrowForward, EmojiEvents, CheckCircle, Refresh, ExpandMore, ExpandLess, ChevronLeft, ChevronRight } from '@mui/icons-material';
 import QCBadge from '../qc/QCBadge';
 import QCDetailPanel from '../qc/QCDetailPanel';
 import type { VideoResult, VideoGenerateOptions } from '../../types';
@@ -451,57 +454,124 @@ export default function VideoPlayer({
 
       {/* Results section */}
       {results.map((sceneResult) => (
-        <Box key={sceneResult.scene_number} sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, letterSpacing: '-0.01em' }}>
-              Scene {sceneResult.scene_number}
-            </Typography>
-            {(sceneResult.regen_attempts ?? 0) > 0 && (
-              <Chip
-                label={`${sceneResult.regen_attempts} QC regen`}
-                size="small"
-                sx={{
-                  bgcolor: 'warning.main',
-                  color: 'warning.contrastText',
-                  fontSize: 11,
-                  fontWeight: 600,
-                  border: 'none',
-                }}
-              />
-            )}
-            {sceneResult.qc_rewrite_context && (
-              <Chip
-                label="QC-informed"
-                size="small"
-                color="info"
-                variant="outlined"
-                sx={{ fontSize: 11, fontWeight: 600, borderColor: 'info.main' }}
-              />
-            )}
-            {onRegenScene && !readOnly && (
-              <Tooltip title={regenLoading[sceneResult.scene_number] ? 'Regenerating...' : 'Regenerate this scene using QC feedback from current result'}>
-                <span>
-                  <IconButton
-                    size="small"
-                    disabled={!!regenLoading[sceneResult.scene_number]}
-                    onClick={async () => {
-                      setRegenLoading((prev) => ({ ...prev, [sceneResult.scene_number]: true }));
-                      try {
-                        await onRegenScene(sceneResult.scene_number, buildOptions(controlValues));
-                      } finally {
-                        setRegenLoading((prev) => ({ ...prev, [sceneResult.scene_number]: false }));
-                      }
-                    }}
-                    sx={{ color: 'text.secondary' }}
-                  >
-                    {regenLoading[sceneResult.scene_number] ? <CircularProgress size={16} /> : <Refresh fontSize="small" />}
-                  </IconButton>
-                </span>
-              </Tooltip>
-            )}
-          </Box>
+        <Accordion
+          key={sceneResult.scene_number}
+          defaultExpanded
+          sx={{ mb: 3, borderRadius: '16px !important', '&:before': { display: 'none' }, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}
+          elevation={0}
+        >
+          <AccordionSummary expandIcon={<ExpandMore />} sx={{ bgcolor: 'action.hover', borderBottom: '1px solid', borderColor: 'divider', px: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, letterSpacing: '-0.01em' }}>
+                Scene {sceneResult.scene_number}
+              </Typography>
+              {(sceneResult.regen_attempts ?? 0) > 0 && (
+                <Chip
+                  label={`${sceneResult.regen_attempts} QC regen`}
+                  size="small"
+                  sx={{
+                    bgcolor: 'warning.main',
+                    color: 'warning.contrastText',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    border: 'none',
+                  }}
+                />
+              )}
+              {sceneResult.qc_rewrite_context && (
+                <Chip
+                  label="QC-informed"
+                  size="small"
+                  color="info"
+                  variant="outlined"
+                  sx={{ fontSize: 11, fontWeight: 600, borderColor: 'info.main' }}
+                />
+              )}
+              {onRegenScene && !readOnly && (
+                <Tooltip title={regenLoading[sceneResult.scene_number] ? 'Regenerating...' : 'Regenerate this scene using QC feedback from current result'}>
+                  <span>
+                    <IconButton
+                      size="small"
+                      disabled={!!regenLoading[sceneResult.scene_number]}
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        setRegenLoading((prev) => ({ ...prev, [sceneResult.scene_number]: true }));
+                        try {
+                          await onRegenScene(sceneResult.scene_number, buildOptions(controlValues));
+                        } finally {
+                          setRegenLoading((prev) => ({ ...prev, [sceneResult.scene_number]: false }));
+                        }
+                      }}
+                      sx={{ color: 'text.secondary' }}
+                    >
+                      {regenLoading[sceneResult.scene_number] ? <CircularProgress size={16} /> : <Refresh fontSize="small" />}
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              )}
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails sx={{ p: 3, bgcolor: 'background.paper' }}>
 
-          <Grid container spacing={2}>
+            <Box sx={{ position: 'relative', mx: -1, px: 1 }}>
+              <IconButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const el = document.getElementById(`carousel-${sceneResult.scene_number}`);
+                  if (el) el.scrollBy({ left: -el.clientWidth * 0.8, behavior: 'smooth' });
+                }}
+                sx={{
+                  position: 'absolute',
+                  left: 16,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  zIndex: 5,
+                  bgcolor: 'background.paper',
+                  color: 'text.primary',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  '&:hover': { bgcolor: 'action.hover', boxShadow: '0 6px 16px rgba(0,0,0,0.2)' }
+                }}
+              >
+                <ChevronLeft />
+              </IconButton>
+
+              <IconButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const el = document.getElementById(`carousel-${sceneResult.scene_number}`);
+                  if (el) el.scrollBy({ left: el.clientWidth * 0.8, behavior: 'smooth' });
+                }}
+                sx={{
+                  position: 'absolute',
+                  right: 16,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  zIndex: 5,
+                  bgcolor: 'background.paper',
+                  color: 'text.primary',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  '&:hover': { bgcolor: 'action.hover', boxShadow: '0 6px 16px rgba(0,0,0,0.2)' }
+                }}
+              >
+                <ChevronRight />
+              </IconButton>
+
+              <Box
+                id={`carousel-${sceneResult.scene_number}`}
+                sx={{
+                  display: 'flex',
+                  gap: 2,
+                  overflowX: 'auto',
+                  pb: 2,
+                  scrollSnapType: 'x mandatory',
+                  scrollBehavior: 'smooth',
+                  msOverflowStyle: 'none',
+                  scrollbarWidth: 'none',
+                  '&::-webkit-scrollbar': {
+                    display: 'none',
+                  },
+                }}
+              >
             {sceneResult.variants.map((variant) => {
               const isSelected = variant.index === sceneResult.selected_index;
               const cardContent = (
@@ -522,15 +592,16 @@ export default function VideoPlayer({
                     />
                   )}
                   <Box
-                    sx={{ position: 'relative', bgcolor: 'common.black' }}
+                    sx={{ position: 'relative', bgcolor: 'common.black', display: 'flex', justifyContent: 'center', width: '100%' }}
                     onClickCapture={(e) => e.stopPropagation()}
                   >
                     <video
                       src={variant.video_path}
                       controls
                       style={{
+                        height: 360,
                         width: '100%',
-                        height: 180,
+                        maxWidth: '100%',
                         objectFit: 'contain',
                       }}
                     />
@@ -540,12 +611,13 @@ export default function VideoPlayer({
                       Variant {variant.index + 1}
                     </Typography>
                     {variant.qc_report && (
-                      <>
+                      <Box sx={{ mt: 3, px: 1, pb: 1 }}>
                         <QCBadge
                           score={getOverallScore(variant.qc_report)}
                           label="Overall"
                         />
-                        <QCDetailPanel
+                        <Box sx={{ mt: 2 }}>
+                          <QCDetailPanel
                           dimensions={[
                             { label: 'Technical', dim: variant.qc_report.technical_distortion },
                             { label: 'Cinematic', dim: variant.qc_report.cinematic_imperfections },
@@ -558,16 +630,18 @@ export default function VideoPlayer({
                             .filter((d) => d.dim != null)
                             .map((d) => ({ label: d.label, score: d.dim!.score, reasoning: d.dim!.reasoning }))}
                         />
-                      </>
+                        </Box>
+                      </Box>
                     )}
                   </CardContent>
                 </>
               );
 
               return (
-                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={variant.index}>
+                <Box key={variant.index} sx={{ flex: { xs: '0 0 85%', sm: '0 0 85%' }, scrollSnapAlign: 'center' }}>
                   <Card
                     sx={{
+                      height: '100%',
                       border: isSelected ? 3 : 1,
                       borderColor: isSelected ? 'primary.main' : 'divider',
                       position: 'relative',
@@ -582,18 +656,21 @@ export default function VideoPlayer({
                     {onSelectVariant && !readOnly ? (
                       <CardActionArea
                         onClick={() => onSelectVariant(sceneResult.scene_number, variant.index)}
-                        sx={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
+                        sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start' }}
                       >
                         {cardContent}
                       </CardActionArea>
                     ) : (
-                      cardContent
+                        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                          {cardContent}
+                        </Box>
                     )}
                   </Card>
-                </Grid>
+                </Box>
               );
             })}
-          </Grid>
+              </Box>
+            </Box>
 
           <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
           {/* QC Rewrite Context — expandable */}
@@ -667,8 +744,9 @@ export default function VideoPlayer({
               </Collapse>
             </Box>
           )}
-        </Box>
-        </Box>
+            </Box>
+          </AccordionDetails>
+        </Accordion>
       ))}
 
       {/* Skeleton placeholders for remaining scenes during progressive loading */}

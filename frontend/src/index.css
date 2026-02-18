@@ -33,14 +33,15 @@
 }
 
 .aurora-bg {
-  background: linear-gradient(-45deg, rgba(232, 240, 254, 0.3), rgba(246, 248, 252, 0.6), rgba(254, 247, 224, 0.3));
-  background-size: 400% 400%;
-  animation: auroraFlow 15s ease infinite;
+  background: linear-gradient(180deg, #E6F0FA 0%, #FAFAFA 400px);
+    background-attachment: fixed;
+    min-height: 100vh;
 }
 
 .dark .aurora-bg {
-  background: linear-gradient(-45deg, rgba(8, 66, 160, 0.1), rgba(19, 19, 20, 0.6), rgba(61, 43, 9, 0.1));
-  background-size: 400% 400%;
+  background: linear-gradient(180deg, rgba(16, 38, 70, 0.8) 0%, #131314 400px);
+    background-attachment: fixed;
+    min-height: 100vh;
 }
 
 .glass-panel {
