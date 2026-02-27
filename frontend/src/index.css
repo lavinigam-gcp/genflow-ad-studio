@@ -17,3 +17,64 @@
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
 }
+
+@keyframes auroraFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.aurora-bg {
+  background: linear-gradient(180deg, #E6F0FA 0%, #FAFAFA 400px);
+    background-attachment: fixed;
+    min-height: 100vh;
+}
+
+.dark .aurora-bg {
+  background: linear-gradient(180deg, rgba(16, 38, 70, 0.8) 0%, #131314 400px);
+    background-attachment: fixed;
+    min-height: 100vh;
+}
+
+.glass-panel {
+  background-color: rgba(255, 255, 255, 0.6) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.dark .glass-panel {
+  background-color: rgba(30, 31, 32, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.file-drop-zone {
+  border: 2px dashed rgba(0, 0, 0, 0.12);
+  border-radius: 16px;
+  background-color: rgba(26, 115, 232, 0.03);
+  transition: all 0.2s ease-in-out;
+}
+
+.file-drop-zone:hover {
+  border-color: #1A73E8;
+  background-color: rgba(26, 115, 232, 0.08);
+}
+
+.dark .file-drop-zone {
+  border-color: rgba(255, 255, 255, 0.12);
+  background-color: rgba(168, 199, 250, 0.04);
+}
+
+.dark .file-drop-zone:hover {
+  border-color: #A8C7FA;
+  background-color: rgba(168, 199, 250, 0.08);
+}

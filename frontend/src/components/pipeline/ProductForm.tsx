@@ -10,8 +10,7 @@ import {
   CircularProgress,
   Box,
   Chip,
-  ToggleButtonGroup,
-  ToggleButton,
+
   IconButton,
   Tab,
   Tabs,
@@ -21,6 +20,8 @@ import {
   FormControl,
   Slider,
   Tooltip,
+  Grid,
+  Paper,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import {
@@ -202,16 +203,20 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false, ini
   };
 
   return (
-    <Card sx={{ maxWidth: 800, mx: 'auto', borderTop: '3px solid', borderTopColor: 'primary.main' }}>
-      <CardContent sx={{ p: 4 }}>
-        <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
-          Create Video Campaign
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Select a sample product or enter your own details below.
-        </Typography>
+    <Card sx={{ maxWidth: 1200, mx: 'auto', borderTop: '4px solid', borderTopColor: 'primary.main' }}>
+      <CardContent sx={{ p: { xs: 3, md: 5 } }}>
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h4" sx={{ mb: 1, fontWeight: 700, letterSpacing: '-0.02em' }}>
+            Create Video Campaign
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Select a sample product or configure your own to start generating a cinematic ad.
+          </Typography>
+        </Box>
 
-        {/* Sample product carousel */}
+        <Grid container spacing={5}>
+          {/* Left Column: Media & Samples */}
+          <Grid size={{ xs: 12, md: 7 }}>
         <Box sx={{ mb: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
             <Inventory2 sx={{ fontSize: 18, color: 'text.secondary' }} />
@@ -315,34 +320,29 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false, ini
               Scene Count
             </Typography>
           </Tooltip>
-          <ToggleButtonGroup
-            value={formData.scene_count ?? 3}
-            exclusive
-            onChange={(_, value) => {
-              if (value !== null) setFormData((prev) => ({ ...prev, scene_count: value }));
-            }}
-            size="medium"
-            disabled={isLoading || readOnly}
-          >
-            {[2, 3, 4, 5, 6].map((n) => (
-              <ToggleButton
-                key={n}
-                value={n}
-                sx={{
-                  px: 3,
-                  fontWeight: 600,
-                  '&.Mui-selected': {
-                    backgroundColor: 'primary.main',
-                    color: 'primary.contrastText',
-                    '&:hover': { backgroundColor: 'primary.dark' },
-                  },
-                }}
-              >
-                {n}
-              </ToggleButton>
-            ))}
-          </ToggleButtonGroup>
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1 }}>
+                {[2, 3, 4, 5, 6].map((n) => {
+                  const isSelected = formData.scene_count === n;
+                  return (
+                    <Chip
+                      key={n}
+                      label={n}
+                      onClick={() => {
+                        if (!readOnly) setFormData((prev) => ({ ...prev, scene_count: n }));
+                      }}
+                      disabled={isLoading || readOnly}
+                      variant={isSelected ? 'filled' : 'outlined'}
+                      color={isSelected ? 'primary' : 'default'}
+                      sx={{
+                        px: 1,
+                        fontWeight: isSelected ? 600 : 500,
+                        minWidth: 48,
+                      }}
+                    />
+                  );
+                })}
+              </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
             ~{(formData.scene_count ?? 3) * 8}s total
           </Typography>
         </Box>
@@ -413,15 +413,11 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false, ini
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onClick={() => !readOnly && fileInputRef.current?.click()}
-              sx={{
-                border: '2px dashed',
-                borderColor: 'divider',
-                borderRadius: 2,
+                  className="file-drop-zone"
+                  sx={{
                 p: 4,
                 textAlign: 'center',
                 cursor: 'pointer',
-                transition: 'border-color 0.2s',
-                '&:hover': { borderColor: 'primary.main' },
               }}
             >
               <input
@@ -438,15 +434,18 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false, ini
               {imageInputLoading ? (
                 <CircularProgress size={24} />
               ) : (
-                <>
-                  <CloudUpload sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
+                      <Box sx={{ py: 3 }}>
+                        <CloudUpload sx={{ fontSize: 48, color: 'primary.main', mb: 2, opacity: 0.8 }} />
+                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                          Drag & drop your product image
+                        </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Drag & drop an image or click to browse
+                          or click to browse local files
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Max 10MB — PNG, JPG, WebP
+                        <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 2 }}>
+                          Max 10MB — High resolution PNG, JPG, or WebP recommended
                   </Typography>
-                </>
+                      </Box>
               )}
             </Box>
           )}
@@ -518,13 +517,19 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false, ini
             </Box>
           )}
         </Box>
+          </Grid>
 
-        {/* Form fields */}
+          {/* Right Column: Details & Settings */}
+          <Grid size={{ xs: 12, md: 5 }}>
         <Box
           component="form"
           onSubmit={handleSubmit}
-          sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
+              sx={{ display: 'flex', flexDirection: 'column', gap: 3.5 }}
         >
+              <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, backgroundColor: 'background.paper', borderRadius: 4, display: 'flex', flexDirection: 'column', gap: 3, border: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', borderBottom: '1px solid', borderColor: 'divider', pb: 1 }}>
+                  Product Details
+                </Typography>
           <TextField
             label="Product Name"
             value={formData.product_name}
@@ -544,6 +549,12 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false, ini
             rows={6}
             disabled={isLoading || readOnly}
           />
+              </Paper>
+
+              <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, backgroundColor: 'background.paper', borderRadius: 4, display: 'flex', flexDirection: 'column', gap: 4, border: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', borderBottom: '1px solid', borderColor: 'divider', pb: 1 }}>
+                  Generation Settings
+                </Typography>
 
           {/* Generation settings */}
           <Box>
@@ -552,33 +563,29 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false, ini
                 Ad Tone
               </Typography>
             </Tooltip>
-            <ToggleButtonGroup
-              value={formData.ad_tone ?? 'energetic'}
-              exclusive
-              onChange={(_, value) => {
-                if (value) setFormData((prev) => ({ ...prev, ad_tone: value }));
-              }}
-              size="small"
-              disabled={isLoading || readOnly}
-            >
-              {AD_TONES.map((tone) => (
-                <ToggleButton
-                  key={tone}
-                  value={tone}
-                  sx={{
-                    textTransform: 'capitalize',
-                    px: 2,
-                    '&.Mui-selected': {
-                      backgroundColor: 'primary.main',
-                      color: 'primary.contrastText',
-                      '&:hover': { backgroundColor: 'primary.dark' },
-                    },
-                  }}
-                >
-                  {tone}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {AD_TONES.map((tone) => {
+                      const isSelected = formData.ad_tone === tone;
+                      return (
+                        <Chip
+                          key={tone}
+                          label={tone}
+                          onClick={() => {
+                            if (!readOnly) setFormData((prev) => ({ ...prev, ad_tone: tone }));
+                          }}
+                          disabled={isLoading || readOnly}
+                          variant={isSelected ? 'filled' : 'outlined'}
+                          color={isSelected ? 'primary' : 'default'}
+                          sx={{
+                            textTransform: 'capitalize',
+                            fontWeight: isSelected ? 600 : 500,
+                            px: 0.5,
+                            transition: 'all 0.2s',
+                          }}
+                        />
+                      );
+                    })}
+                  </Box>
           </Box>
 
           <Box sx={{ maxWidth: 320 }}>
@@ -645,6 +652,7 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false, ini
               placeholder="e.g. Focus on sustainability features, use humor, target Gen-Z audience..."
             />
           </Box>
+              </Paper>
 
           <Button
             type="submit"
@@ -661,11 +669,13 @@ export default function ProductForm({ onSubmit, isLoading, readOnly = false, ini
                 <AutoAwesome />
               )
             }
-            sx={{ py: 1.5, fontSize: '1rem' }}
+                sx={{ py: 2, fontSize: '1.1rem', mt: 2, boxShadow: '0 8px 24px rgba(26,115,232,0.25)' }}
           >
             {isLoading ? 'Generating Script...' : 'Generate Script'}
           </Button>
         </Box>
+          </Grid>
+        </Grid>
       </CardContent>
     </Card>
   );

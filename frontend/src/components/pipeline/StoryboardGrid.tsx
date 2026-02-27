@@ -20,6 +20,7 @@ import {
   Dialog,
   Collapse,
   CircularProgress,
+  Paper,
 } from '@mui/material';
 import { ArrowForward, Refresh, ZoomIn, Close, ExpandMore, ExpandLess } from '@mui/icons-material';
 import QCBadge from '../qc/QCBadge';
@@ -104,14 +105,18 @@ export default function StoryboardGrid({
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: 'text.primary' }}>
             Storyboard
           </Typography>
           <ModelBadge />
         </Box>
         {hasResults && (
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <Chip label={`${results.length} scenes`} variant="outlined" />
+            <Chip
+              label={`${results.length} scenes`}
+              variant="outlined"
+              sx={{ borderRadius: 16, fontWeight: 600, color: 'text.primary', borderColor: 'divider' }}
+            />
             <QCBadge score={avgAvatarScore} label="Avg Avatar" />
             <QCBadge score={avgProductScore} label="Avg Product" />
           </Box>
@@ -120,17 +125,18 @@ export default function StoryboardGrid({
 
       {/* Controls panel */}
       {!readOnly && (
-        <Box
+        <Paper
+          elevation={0}
           sx={{
             display: 'flex',
             flexDirection: 'column',
             gap: 2.5,
-            p: 3,
-            mb: 3,
+            p: { xs: 2, md: 3 },
+            mb: 4,
             border: '1px solid',
             borderColor: 'divider',
-            borderRadius: 2,
-            bgcolor: 'background.default',
+            borderRadius: 4,
+            bgcolor: 'background.paper',
           }}
         >
           {/* Row 1: Aspect ratio chip + Image model + Storyboard Resolution */}
@@ -209,7 +215,7 @@ export default function StoryboardGrid({
                   />
                 }
                 label={
-                  <Typography variant="body2">Include Composition QC</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>Include Composition QC</Typography>
                 }
                 sx={{ cursor: 'help' }}
               />
@@ -231,7 +237,7 @@ export default function StoryboardGrid({
                 ? 'Regenerate Storyboard'
                 : 'Generate Storyboard'}
           </Button>
-        </Box>
+        </Paper>
       )}
 
       {/* Skeleton loading state — pure skeletons when no results yet */}
@@ -408,7 +414,7 @@ export default function StoryboardGrid({
                           onClick={() => setExpandedPrompts((p) => ({ ...p, [result.scene_number]: !p[result.scene_number] }))}
                           sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: 0.5 }}
                         >
-                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                             Prompt Used
                           </Typography>
                           {expandedPrompts[result.scene_number] ? <ExpandLess sx={{ fontSize: 16 }} /> : <ExpandMore sx={{ fontSize: 16 }} />}
@@ -446,7 +452,7 @@ export default function StoryboardGrid({
                         multiline
                         maxRows={3}
                         disabled={isLoading}
-                        sx={{ mt: 1, '& .MuiInputBase-input': { fontSize: 12 } }}
+                          sx={{ mt: 1.5, '& .MuiInputBase-root': { backgroundColor: 'background.default' }, '& .MuiInputBase-input': { fontSize: 13, lineHeight: 1.5 } }}
                         placeholder="Override prompt for this scene..."
                       />
                     )}
